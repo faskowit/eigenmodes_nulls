@@ -17,12 +17,6 @@ mesh_interest = 'midthickness';
 surface_midthickness.vertices = vertices';
 surface_midthickness.faces = faces';
 
-% Load sphere
-mesh_interest = 'sphere';
-[vertices, faces] = read_vtk(sprintf('./BrainEigenModes/data/template_surfaces_volumes/%s_%s-%s.vtk', surface_interest, mesh_interest, hemisphere));
-surface_sphere.vertices = vertices';
-surface_sphere.faces = faces';
-
 % Load cortex mask
 cortex = logical(dlmread(sprintf('./BrainEigenModes/data/template_surfaces_volumes/%s_cortex-%s_mask.txt', surface_interest, hemisphere)));
 
@@ -48,32 +42,46 @@ disp('loaded eigenmodes')
 addpath(genpath('./BrainSpace/matlab'))
 
 % make a matlab surface that BrainSpace is happy with
-brainspace_sphere = struct() ; 
-brainspace_sphere.tri = surface_sphere.faces ;  
-brainspace_sphere.coord = surface_sphere.vertices' ; 
+brainspace_midthick = struct() ; 
+brainspace_midthick.tri = surface_midthickness.faces ;  
+brainspace_midthick.coord = surface_midthickness.vertices' ; 
 
-%% Generate spin inds, which we can use for all of the tests
+%% Make geodesic
 
-ncoords = size(brainspace_sphere.coord,2) ; 
-ordered_inds = 1:ncoords ; 
-ordered_inds(~cortex) = nan ;
+G = surface_to_graph(brainspace_midthick,'mesh',logical(~cortex),true) ; 
+shortest_paths = distances(G,'Method','unweighted') ; % computes shortest paths
+closeness = 1./shortest_paths ; 
+closeness(isinf(closeness)) = 0 ;
 
-filename = sprintf('./gen_data/spininds_%s-%s.mat',surface_interest,hemisphere) ; 
+dist_thr = prctile(shortest_paths,20,'all') ; % arbitrary param, how much 
+                                             % local sp neighbourhood to
+                                             % capture in graph...
+W = closeness .* (shortest_paths < dist_thr) ; 
 
-if ~isfile(filename)
-    disp('generating spin inds')
-    spin_inds = spin_permutations((1:length(ncoords))',...
-        brainspace_sphere,5e4,...
-        'random_state',42) ;
-    assert(length(ncoords)<intmax('int16'))
-    spin_inds = int16(squeeze(spin_inds{1})) ; 
-    save(filename,'spin_inds')
-else
-    load(filename)
-    disp('loaded spin ind   s')
-end
+clear closeness shortest_paths
 
-%% Loop over zstat maps and do spin tests
+% tic
+% MEM = compute_mem(geodesic_sim_thr) ; 
+% toc
+
+% center it
+W = full(W - mean(W) - mean(W,2) + mean(W,"all",'omitnan')); 
+
+assert(issymmetric(W),'not symmetric,problem')
+
+tic
+[MEM,lambda] = eigs(W,num_modes*10); % not the full decomp, to save time
+                                      % still waaaay less
+                                      % dimensionality that the mesh
+toc
+
+lambda = diag(lambda) ; 
+
+% Sort eigenvectors and values.
+[~, idx] = sort(lambda,'descend');
+MEM = MEM(:,idx);
+
+%% Loop over zstat maps and do moran tests
 
 nperms = 5e3; 
 
@@ -82,8 +90,8 @@ map_names = fieldnames(loaded_data.task_map_emp) ;
 
 for map_idx = 1:length(map_names)
 
-    spin_results = struct() ; 
-    spin_results.name = map_names{map_idx} ; 
+    moran_results = struct() ; 
+    moran_results.name = map_names{map_idx} ; 
 
     %% Get the empirical accuracy  
     data_to_reconstruct = loaded_data.task_map_emp.(map_names{map_idx}) ; 
@@ -93,17 +101,23 @@ for map_idx = 1:length(map_names)
     
     %% do spins and recort results
     
-    filename = sprintf('./gen_data/spinres_%s_%s-%s.mat',map_names{map_idx},surface_interest,hemisphere) ; 
+    filename = sprintf('./gen_data/moranres_%s_%s-%s.mat',map_names{map_idx},surface_interest,hemisphere) ; 
     
     if ~isfile(filename)
 
         % compute original accuracy
-        spin_results.recon_acc = calc_eigdecomp_recon_acc(data_to_reconstruct(cortex),eigenmodes(cortex,:),num_modes) ; 
+        moran_results.recon_acc = calc_eigdecomp_recon_acc(data_to_reconstruct(cortex),eigenmodes(cortex,:),num_modes) ; 
         
-        % make a smaller version to send to parfor
-        spin_inds_smaller = spin_inds(:,randperm(5e4,nperms)) ; 
-        
-        perm_acc_spin = nan(num_modes,nperms) ; 
+        % make the randomized data
+        surr_data_tmp = moran_randomization(data_to_reconstruct(~~cortex),...
+                                MEM,nperms,'procedure','singleton') ;
+        surr_data = nan(length(cortex),nperms) ; 
+        for idx = 1:nperms
+            surr_data(~~cortex,idx) = surr_data_tmp(:,1,idx) ;  
+        end
+        clear surr_data_tmp
+
+        perm_acc_moran = nan(num_modes,nperms) ; 
 
         % measure reconstruct accuracy on spin data
         parfor idx = 1:nperms
@@ -114,21 +128,16 @@ for map_idx = 1:length(map_names)
         
             disp(idx)
         
-            tmp_surr_data = data_to_reconstruct(spin_inds_smaller(:,idx)) ;
-        
-            % dont predict where the medial wall has 'spun' into
-            perm_mask = (cortex & ~isnan(tmp_surr_data)) ; 
-        
-            perm_acc_spin(:,idx) = calc_eigdecomp_recon_acc(tmp_surr_data(perm_mask),...
-                                               eigenmodes(perm_mask,:),num_modes) ; 
+            perm_acc_moran(:,idx) = calc_eigdecomp_recon_acc(surr_data(cortex,idx),...
+                                               eigenmodes(cortex,:),num_modes) ; 
         
         end
     
         % record results in the struct 
-        spin_results.perm_acc = perm_acc_spin ; 
+        moran_results.perm_acc = perm_acc_moran ; 
 
         % save it
-        save(filename,'spin_results')
+        save(filename,'moran_results')
 
     end
 
@@ -140,12 +149,12 @@ tiledlayout(2,length(map_names))
 
 for idx = 1:length(map_names)
 
-    filename = sprintf('./gen_data/spinres_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
+    filename = sprintf('./gen_data/moranres_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
 
     ll = load(filename) ; 
 
-    perm_acc = ll.spin_results.perm_acc ;
-    recon_acc = ll.spin_results.recon_acc ;
+    perm_acc = ll.moran_results.perm_acc ;
+    recon_acc = ll.moran_results.recon_acc ;
 
     nexttile(idx)
     plot(perm_acc,'Color',[0 0.4470 0.7410 0.05],'LineWidth',2) 
@@ -180,7 +189,3 @@ for idx = 1:length(map_names)
     end
 
 end
-
-
-
-
