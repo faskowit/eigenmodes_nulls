@@ -3,7 +3,7 @@ clearvars
 
 %% Load relevant repository MATLAB functions
 
-addpath(genpath('./BrainEigenModes/functions_matlab'));
+addpath(genpath('./NSBLab_repo/functions_matlab'));
 addpath('./fcn/')
 
 %% Load surface files for visualization
@@ -13,18 +13,18 @@ hemisphere = 'lh';
 mesh_interest = 'midthickness';
 
 % Load midthickness
-[vertices, faces] = read_vtk(sprintf('./BrainEigenModes/data/template_surfaces_volumes/%s_%s-%s.vtk', surface_interest, mesh_interest, hemisphere));
+[vertices, faces] = read_vtk(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%s_%s-%s.vtk', surface_interest, mesh_interest, hemisphere));
 surface_midthickness.vertices = vertices';
 surface_midthickness.faces = faces';
 
 % Load sphere
 mesh_interest = 'sphere';
-[vertices, faces] = read_vtk(sprintf('./BrainEigenModes/data/template_surfaces_volumes/%s_%s-%s.vtk', surface_interest, mesh_interest, hemisphere));
+[vertices, faces] = read_vtk(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%s_%s-%s.vtk', surface_interest, mesh_interest, hemisphere));
 surface_sphere.vertices = vertices';
 surface_sphere.faces = faces';
 
 % Load cortex mask
-cortex = logical(dlmread(sprintf('./BrainEigenModes/data/template_surfaces_volumes/%s_cortex-%s_mask.txt', surface_interest, hemisphere)));
+cortex = logical(dlmread(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%s_cortex-%s_mask.txt', surface_interest, hemisphere)));
 
 disp('loaded surfaces')
 
@@ -36,7 +36,7 @@ num_modes = 50;
 if num_modes == 200
     eigenmodes = dlmread(sprintf('./osf_dl/template_eigenmodes/fsLR_32k_midthickness-%s_emode_%i.txt', hemisphere, num_modes));
 elseif num_modes == 50
-    eigenmodes = dlmread(sprintf('./BrainEigenModes/data/examples/fsLR_32k_midthickness-%s_emode_%i.txt', hemisphere, num_modes));
+    eigenmodes = dlmread(sprintf('./NSBLab_repo/data/examples/fsLR_32k_midthickness-%s_emode_%i.txt', hemisphere, num_modes));
 else
     error('dont have that number of modes, please')
 end
@@ -77,7 +77,7 @@ end
 
 nperms = 5e3; 
 
-loaded_data = load('./BrainEigenmodes/data/figures/Figure1.mat') ;
+loaded_data = load('./NSBLab_repo/data/figures/Figure1.mat') ;
 map_names = fieldnames(loaded_data.task_map_emp) ;
 
 for map_idx = 1:length(map_names)
