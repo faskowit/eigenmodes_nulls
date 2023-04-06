@@ -76,7 +76,7 @@ end
 
 nperms = 5e3; 
 
-loaded_data = load('./NSBLab_repo/data/figures/Figure1.mat') ;
+loaded_data = load('./NSBLab_repo/data/figures_Nature/Figure1.mat') ;
 map_names = fieldnames(loaded_data.task_map_emp) ;
 
 for map_idx = 1:length(map_names)
