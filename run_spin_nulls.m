@@ -100,7 +100,7 @@ for map_idx = 1:length(map_names)
         spin_results.recon_acc = calc_eigdecomp_recon_acc(data_to_reconstruct(cortex),eigenmodes(cortex,:),num_modes) ; 
         
         % make a smaller version to send to parfor
-        spin_inds_smaller = spin_inds(:,randperm(5e4,nperms)) ; 
+        spin_inds_smaller = spin_inds(:,randperm(size(spin_inds,2),nperms)) ; 
         
         perm_acc_spin = nan(num_modes,nperms) ; 
 
