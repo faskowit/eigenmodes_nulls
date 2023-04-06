@@ -1,7 +1,11 @@
-function [ recon_acc, recon_beta] = calc_eigdecomp_recon_acc(data_to_recon,eigenmodes,num_modes)
+function [ recon_acc, recon_beta] = calc_eigdecomp_recon_acc(data_to_recon,eigenmodes,num_modes,corrtype)
 % recon_acc: vector of correlation coeffs btwn data and recon'ed data
 %
 % Josh Faskowitz
+
+if nargin < 4
+    corrtype = 'p' ; 
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % fit the betas
@@ -14,8 +18,9 @@ function [ recon_acc, recon_beta] = calc_eigdecomp_recon_acc(data_to_recon,eigen
 
 % arrayfun it
 recon_beta_cell = arrayfun(@(ind_) ...
-    calc_eigendecomposition(data_to_recon, eigenmodes(:, 1:ind_), 'matrix') , ...
-    1:num_modes, 'UniformOutput',false) ; 
+    calc_eigendecomposition(data_to_recon, ...
+        eigenmodes(:, 1:ind_), 'matrix' ...
+    ), 1:num_modes, 'UniformOutput',false) ; 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % assess correlation btwn data and recon
@@ -29,8 +34,9 @@ recon_beta_cell = arrayfun(@(ind_) ...
 % arrayfun it
 recon_acc = arrayfun(@(ind_) ...
     corr(data_to_recon, ...
-         eigenmodes(:, 1:ind_)*recon_beta_cell{ind_} ...
-        ), 1:num_modes) ;
+         eigenmodes(:, 1:ind_)*recon_beta_cell{ind_}, ...
+         'type',corrtype ...
+    ), 1:num_modes) ;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % provide recon betas if wanted

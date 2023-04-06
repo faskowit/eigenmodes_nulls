@@ -48,38 +48,50 @@ brainspace_midthick.coord = surface_midthickness.vertices' ;
 
 %% Make geodesic
 
-G = surface_to_graph(brainspace_midthick,'mesh',logical(~cortex),true) ; 
-shortest_paths = distances(G,'Method','unweighted') ; % computes shortest paths
-closeness = 1./shortest_paths ; 
-closeness(isinf(closeness)) = 0 ;
+filename = sprintf('./gen_data/moranMEM_modes-%s_%s-%s.mat',num2str(num_modes),surface_interest,hemisphere) ; 
 
-dist_thr = prctile(shortest_paths,20,'all') ; % arbitrary param, how much 
-                                             % local sp neighbourhood to
-                                             % capture in graph...
-W = closeness .* (shortest_paths < dist_thr) ; 
+if ~isfile(filename)
 
-clear closeness shortest_paths
+    G = surface_to_graph(brainspace_midthick,'mesh',logical(~cortex),true) ; 
+    shortest_paths = distances(G,'Method','unweighted') ; % computes shortest paths
+    closeness = 1./shortest_paths ; 
+    closeness(isinf(closeness)) = 0 ;
+    
+    dist_thr = prctile(shortest_paths,20,'all') ; % arbitrary param, how much 
+                                                 % local sp neighbourhood to
+                                                 % capture in graph...
+    W = closeness .* (shortest_paths < dist_thr) ; 
+    
+    clear closeness shortest_paths
+    
+    % center it
+    W = full(W - mean(W) - mean(W,2) + mean(W,"all",'omitnan')); 
+    
+    % enforce symmetry
+    W = triu(W,1) + triu(W)' ; 
+    assert(issymmetric(W),'not symmetric,problem')
+    
+    tic
+    [MEM,lambda] = eigs(W,num_modes*10); % not the full decomp, to save time
+                                          % still waaaay less
+                                          % dimensionality that the mesh
+    toc
+    % to do full decomp: 
+    % tic
+    % MEM = compute_mem(geodesic_sim_thr) ; 
+    % toc
+    
+    lambda = diag(lambda) ; 
+    
+    % Sort eigenvectors and values.
+    [~, idx] = sort(lambda,'descend');
+    MEM = MEM(:,idx);
 
-% tic
-% MEM = compute_mem(geodesic_sim_thr) ; 
-% toc
-
-% center it
-W = full(W - mean(W) - mean(W,2) + mean(W,"all",'omitnan')); 
-
-assert(issymmetric(W),'not symmetric,problem')
-
-tic
-[MEM,lambda] = eigs(W,num_modes*10); % not the full decomp, to save time
-                                      % still waaaay less
-                                      % dimensionality that the mesh
-toc
-
-lambda = diag(lambda) ; 
-
-% Sort eigenvectors and values.
-[~, idx] = sort(lambda,'descend');
-MEM = MEM(:,idx);
+    save(filename,'MEM')
+    clear W
+else
+    load(filename)
+end
 
 %% Loop over zstat maps and do moran tests
 
@@ -157,7 +169,7 @@ for idx = 1:length(map_names)
     recon_acc = ll.moran_results.recon_acc ;
 
     nexttile(idx)
-    plot(perm_acc,'Color',[0 0.4470 0.7410 0.05],'LineWidth',2) 
+    plot_manylines(perm_acc,'Color',[0 0.4470 0.7410 0.05],'LineWidth',2) ; 
     hold on 
     plot(recon_acc,'r','LineWidth',2)
     hold off

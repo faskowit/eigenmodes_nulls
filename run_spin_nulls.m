@@ -148,7 +148,7 @@ for idx = 1:length(map_names)
     recon_acc = ll.spin_results.recon_acc ;
 
     nexttile(idx)
-    plot(perm_acc,'Color',[0 0.4470 0.7410 0.05],'LineWidth',2) 
+    plot_manylines(perm_acc,'Color',[0 0.4470 0.7410 0.05],'LineWidth',2) 
     hold on 
     plot(recon_acc,'r','LineWidth',2)
     hold off

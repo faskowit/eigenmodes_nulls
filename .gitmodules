@@ -1,6 +1,3 @@
-[submodule "BrainEigenmodes"]
-	path = BrainEigenmodes
-	url = https://github.com/BMHLab/BrainEigenmodes.git
 [submodule "BrainSpace"]
 	path = BrainSpace
 	url = https://github.com/MICA-MNI/BrainSpace.git
