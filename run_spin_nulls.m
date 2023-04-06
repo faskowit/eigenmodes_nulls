@@ -31,7 +31,7 @@ disp('loaded surfaces')
 %% Load eigenmodes
 
 hemisphere = 'lh';
-num_modes = 50;
+num_modes = 200;
 
 if num_modes == 200
     eigenmodes = dlmread(sprintf('./osf_dl/template_eigenmodes/fsLR_32k_midthickness-%s_emode_%i.txt', hemisphere, num_modes));
@@ -55,22 +55,21 @@ brainspace_sphere.coord = surface_sphere.vertices' ;
 %% Generate spin inds, which we can use for all of the tests
 
 ncoords = size(brainspace_sphere.coord,2) ; 
-ordered_inds = 1:ncoords ; 
-ordered_inds(~cortex) = nan ;
 
 filename = sprintf('./gen_data/spininds_%s-%s.mat',surface_interest,hemisphere) ; 
 
 if ~isfile(filename)
     disp('generating spin inds')
-    spin_inds = spin_permutations((1:length(ncoords))',...
-        brainspace_sphere,5e4,...
+    spin_inds = spin_permutations((1:ncoords)',...
+        brainspace_sphere,2.5e4,...
         'random_state',42) ;
-    assert(length(ncoords)<intmax('int16'))
+    assert(ncoords<intmax('int16'))
     spin_inds = int16(squeeze(spin_inds{1})) ; 
     save(filename,'spin_inds')
+    disp('finished making spin nulls')
 else
     load(filename)
-    disp('loaded spin ind   s')
+    disp('loaded spin inds')
 end
 
 %% Loop over zstat maps and do spin tests

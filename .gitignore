@@ -131,3 +131,4 @@ osf_dl/*/
 .DS_Store
 *asv
 gen_data/*mat
+osf_dl/*zip
