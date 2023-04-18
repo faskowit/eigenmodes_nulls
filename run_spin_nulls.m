@@ -28,7 +28,7 @@ cortex = logical(dlmread(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%
 
 disp('loaded surfaces')
 
-%% Load eigenmodes
+%% Load connectome modes
 
 hemisphere = 'lh';
 num_modes = 200;
@@ -136,6 +136,7 @@ end
 %% viz it
 
 tiledlayout(2,length(map_names))
+set(gcf,'Position', [200 200 1200 600]);
 
 for idx = 1:length(map_names)
 
@@ -152,20 +153,24 @@ for idx = 1:length(map_names)
     plot(recon_acc,'r','LineWidth',2)
     hold off
     
-    xlim([1 50])
+    xlim([1 num_modes])
     ylim([-0.25 1])
 
     if idx == 1
         ylabel('recon accuracy')
     end
 
+    if idx == 4
+        xlabel('eigenmodes used for recon')
+    end
+
     title(map_names{idx},'Interpreter','none')
     
     nexttile(idx+length(map_names))
     pvals = ( sum(bsxfun(@gt,perm_acc,recon_acc'),2) + 1) ./ (nperms+1) ; 
-    plot(pvals,'mo-','LineWidth',2)
+    plot(pvals,'mo-','LineWidth',2,'MarkerSize',3)
     
-    xlim([1 50])
+    xlim([1 num_modes])
     ylim([0 1])
 
     % title([ 'p-value' map_names{idx}],'Interpreter','none')
@@ -180,6 +185,15 @@ for idx = 1:length(map_names)
 
 end
 
+%%
 
+% save the figure as pdf
+set(0, 'DefaultFigureRenderer', 'painters');
+mkdir([ pwd '/output_res/' ] )
+ff = sprintf('%s/output_res/eigenmodes_nulls_spin_mode_%s-%s.png',pwd,num2str(num_modes),hemisphere) ;
+print(gcf,'-dpng',ff);
 
+ff = sprintf('%s/output_res/eigenmodes_nulls_spin_mode_%s-%s.pdf',pwd,num2str(num_modes),hemisphere) ;
+print(gcf,'-dpdf',ff,'-bestfit');
+close(gcf)
 

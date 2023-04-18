@@ -25,7 +25,7 @@ disp('loaded surfaces')
 %% Load eigenmodes
 
 hemisphere = 'lh';
-num_modes = 50;
+num_modes = 200;
 
 if num_modes == 200
     eigenmodes = dlmread(sprintf('./osf_dl/template_eigenmodes/fsLR_32k_midthickness-%s_emode_%i.txt', hemisphere, num_modes));
@@ -71,21 +71,49 @@ if ~isfile(filename)
     W = triu(W,1) + triu(W)' ; 
     assert(issymmetric(W),'not symmetric,problem')
     
-    tic
-    [MEM,lambda] = eigs(W,num_modes*10); % not the full decomp, to save time
-                                          % still waaaay less
-                                          % dimensionality that the mesh
-    toc
-    % to do full decomp: 
-    % tic
-    % MEM = compute_mem(geodesic_sim_thr) ; 
-    % toc
+    eigsize = 'full' ; 
+
+    disp('doing decomp')
+
+    if strcmp(eigsize,'partial')
+
+        tic
+        [MEM,lambda] = eigs(W,num_modes*10); % not the full decomp, to save time
+                                              % still waaaay less
+                                              % dimensionality that the mesh
+        toc
+        lambda = diag(lambda) ; 
     
-    lambda = diag(lambda) ; 
+    elseif strcmp(eigsize,'full')
+        
+        tic
+        % Full eigenvalue decomposition of W. 
+        % [MEM,lambda] = eig(full(W),'vector');
+        W = sparse(W) ; 
+        [MEM,lambda] = eigs(W,size(W,1)) ; 
+        lambda = diag(lambda) ;
+        toc
+
+    else 
+        error('neeed valid eigsize var')
+    end
+
+    % Remove zero eigenvector
+    zdx = find(abs(lambda) < 1e-10); 
+
+    % See supplemental info 3 of Ref 1, function scores.listw().
+    w = [ones(size(MEM,1),1),MEM(:,zdx)];
+    Q = qr(w);
+    MEM(:,zdx) = Q(:,1:end-1);
+    MEM(:,zdx(1)) = [];
+    lambda(zdx(1)) = []; 
+
+    disp('finished decomp')
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     % Sort eigenvectors and values.
-    [~, idx] = sort(lambda,'descend');
-    MEM = MEM(:,idx);
+    [~, ss] = sort(lambda,'descend');
+    MEM = MEM(:,ss);
 
     save(filename,'MEM')
     clear W
@@ -93,7 +121,7 @@ else
     load(filename)
 end
 
-%% Loop over zstat maps and do moran tests
+% Loop over zstat maps and do moran tests
 
 nperms = 5e3; 
 
@@ -174,7 +202,7 @@ for idx = 1:length(map_names)
     plot(recon_acc,'r','LineWidth',2)
     hold off
     
-    xlim([1 50])
+    xlim([1 num_modes])
     ylim([-0.25 1])
 
     if idx == 1
@@ -187,7 +215,7 @@ for idx = 1:length(map_names)
     pvals = ( sum(bsxfun(@gt,perm_acc,recon_acc'),2) + 1) ./ (nperms+1) ; 
     plot(pvals,'mo-','LineWidth',2)
     
-    xlim([1 50])
+    xlim([1 num_modes])
     ylim([0 1])
 
     % title([ 'p-value' map_names{idx}],'Interpreter','none')
