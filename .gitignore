@@ -135,5 +135,5 @@ osf_dl/*zip
 output_res/*
 *pdf
 *png
-./gen_data/*mat
-./gen_data/*txt
+gen_data/*mat
+gen_data/*txt
