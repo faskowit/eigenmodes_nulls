@@ -137,3 +137,4 @@ output_res/*
 *png
 gen_data/*mat
 gen_data/*txt
+gen_data/bunny_medial/*
