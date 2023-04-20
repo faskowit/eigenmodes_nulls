@@ -138,3 +138,5 @@ output_res/*
 gen_data/*mat
 gen_data/*txt
 gen_data/bunny_medial/*
+*bk
+gen_data/bunny_medial_eigen/*
