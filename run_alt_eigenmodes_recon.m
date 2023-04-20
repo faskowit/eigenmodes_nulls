@@ -22,7 +22,7 @@ cortex = logical(dlmread(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%
 
 disp('loaded surfaces')
 
-%% Load eigenmodes
+%% First load paper eigenmodes
 
 hemisphere = 'lh';
 num_modes = 200;
