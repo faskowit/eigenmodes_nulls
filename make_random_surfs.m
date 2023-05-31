@@ -30,6 +30,8 @@ disp('loaded surfaces')
 
 %% perturb sphere
 
+addpath(genpath('./BrainSpace/matlab'))
+
 G = surface_to_graph(surface_sphere,'mesh') ; 
 shortest_paths = distances(G,'Method','unweighted') ; % computes shortest paths
 closeness = 1./shortest_paths ; 
@@ -66,6 +68,8 @@ rng(42)
 odir = 'gen_data/rand_surfs' ;
 mkdir(odir)
 
+newsurf = struct() ;
+
 for idx = 1:100
 
     disp(idx)
@@ -78,9 +82,13 @@ for idx = 1:100
     % move the vertices
     newverts = surface_sphere.vertices + (normalize(rand_mem,'range',[-1 1]).*(xyz_ranges.*.15)) ; 
     
-    newsurf.vertices = newverts' ;
-    newsurf.faces = surface_sphere.faces ; 
+    newsurf.coord = newverts' ;
+    newsurf.tri = surface_sphere.faces ; 
     
     write_surface(newsurf,sprintf('%s/rand_surf_%03g.gii',odir,idx))
 
 end
+
+%% just a quick viz
+
+quick_trisurf(read_surface(sprintf('%s/rand_surf_%03g.gii',odir,4)))

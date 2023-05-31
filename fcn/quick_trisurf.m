@@ -14,4 +14,8 @@ if nargin < 2
     data = 1:length(verts) ;
 end
  
+if size(verts,2) > size(verts,1) 
+    verts = verts' ; 
+end
+
 h = trisurf(faces,verts(:,1),verts(:,2),verts(:,3),data) ; 

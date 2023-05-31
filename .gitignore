@@ -141,3 +141,4 @@ gen_data/bunny_medial/*
 *bk
 gen_data/bunny_medial_eigen/*
 gen_data/rand_surfs/*
+gen_data/randsurfs_eigen/*
