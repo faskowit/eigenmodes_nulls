@@ -90,6 +90,10 @@ set(gcf,'Position', [200 200 1200 600]);
 map_names_better = { 'Social' 'Motor' 'Gambling' 'Working memory' ...
     'Language' 'Emotion' 'Relational' } ;
 
+surface_interest = 'fsLR_32k';
+hemisphere = 'lh';
+num_modes = 200 ; 
+
 for idx = 1:length(map_names)
 
     filename = sprintf('./gen_data/randsurfs_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ;
@@ -149,4 +153,27 @@ outfile = './figures/randsurfs_eigenmodes.pdf' ;
 orient(gcf,'landscape')
 print(gcf,'-dpdf',outfile,'-bestfit','-vector')
 
+%% viz random shapes?
 
+set(gcf,'Position', [200 200 1200 1200]);
+
+tiledlayout(4,4)
+
+for idx = 1:16
+
+    nexttile()
+
+    [randsurf.vertices, randsurf.faces] = read_vtk(sprintf('./gen_data/rand_surfs/rand_surf_%03g.vtk',idx));
+    
+    h = quick_trisurf(randsurf) ;
+    h.EdgeColor = "none";
+    material shiny
+    camlight headlight
+    lighting gouraud
+    xticks('') ; yticks('') ; zticks('')
+
+end
+
+outfile = './figures/randsurfs_view_shapes.pdf' ; 
+orient(gcf,'landscape')
+print(gcf,'-dpdf',outfile,'-vector','-bestfit')

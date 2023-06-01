@@ -14,6 +14,13 @@ if nargin < 2
     data = 1:length(verts) ;
 end
  
+if size(faces,2) > size(faces,1) 
+    faces = faces' ; 
+end
+
+if size(verts,2) > size(verts,1) 
+    verts = verts' ; 
+end
 if size(verts,2) > size(verts,1) 
     verts = verts' ; 
 end
