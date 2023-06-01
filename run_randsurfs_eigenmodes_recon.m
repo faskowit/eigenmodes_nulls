@@ -87,6 +87,9 @@ end
 tiledlayout(2,length(map_names))
 set(gcf,'Position', [200 200 1200 600]);
 
+map_names_better = { 'Social' 'Motor' 'Gambling' 'Working memory' ...
+    'Language' 'Emotion' 'Relational' } ;
+
 for idx = 1:length(map_names)
 
     filename = sprintf('./gen_data/randsurfs_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ;
@@ -113,7 +116,7 @@ for idx = 1:length(map_names)
         xlabel('eigenmodes used for recon')
     end
 
-    title(map_names{idx},'Interpreter','none')
+    title(map_names_better{idx},'Interpreter','none')
     
     nexttile(idx+length(map_names))
     pvals = ( sum(bsxfun(@gt,perm_acc,recon_acc'),2) + 1) ./ (size(ll.blob_results.blobrecons,2)+1) ; 
@@ -134,10 +137,16 @@ for idx = 1:length(map_names)
 
 end
 
-%%
+% figure
+% plot_manylines(blobrecons)
+% hold on 
+% plot(surfrecon)
+% xlim([1 num_modes])
 
-figure
-plot_manylines(blobrecons)
-hold on 
-plot(surfrecon)
-xlim([1 num_modes])
+%% save it
+
+outfile = './figures/randsurfs_eigenmodes.pdf' ; 
+orient(gcf,'landscape')
+print(gcf,'-dpdf',outfile,'-bestfit','-vector')
+
+

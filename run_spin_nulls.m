@@ -138,6 +138,11 @@ end
 tiledlayout(2,length(map_names))
 set(gcf,'Position', [200 200 1200 600]);
 
+nperms = 5e3; 
+
+map_names_better = { 'Social' 'Motor' 'Gambling' 'Working memory' ...
+    'Language' 'Emotion' 'Relational' } ;
+
 for idx = 1:length(map_names)
 
     filename = sprintf('./gen_data/spinres_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
@@ -164,7 +169,7 @@ for idx = 1:length(map_names)
         xlabel('eigenmodes used for recon')
     end
 
-    title(map_names{idx},'Interpreter','none')
+    title(map_names_better{idx},'Interpreter','none')
     
     nexttile(idx+length(map_names))
     pvals = ( sum(bsxfun(@gt,perm_acc,recon_acc'),2) + 1) ./ (nperms+1) ; 
@@ -187,13 +192,71 @@ end
 
 %%
 
-% save the figure as pdf
-set(0, 'DefaultFigureRenderer', 'painters');
-mkdir([ pwd '/output_res/' ] )
-ff = sprintf('%s/output_res/eigenmodes_nulls_spin_mode_%s-%s.png',pwd,num2str(num_modes),hemisphere) ;
-print(gcf,'-dpng',ff);
+% % save the figure as pdf
+% set(0, 'DefaultFigureRenderer', 'painters');
+% mkdir([ pwd '/output_res/' ] )
+% ff = sprintf('%s/output_res/eigenmodes_nulls_spin_mode_%s-%s.png',pwd,num2str(num_modes),hemisphere) ;
+% print(gcf,'-dpng',ff);
+% 
+% ff = sprintf('%s/output_res/eigenmodes_nulls_spin_mode_%s-%s.pdf',pwd,num2str(num_modes),hemisphere) ;
+% print(gcf,'-dpdf',ff,'-bestfit');
+% close(gcf)
 
-ff = sprintf('%s/output_res/eigenmodes_nulls_spin_mode_%s-%s.pdf',pwd,num2str(num_modes),hemisphere) ;
-print(gcf,'-dpdf',ff,'-bestfit');
-close(gcf)
+outfile = './figures/spinnulls_eigenmodes.pdf' ; 
+orient(gcf,'landscape')
+print(gcf,'-dpdf',outfile,'-bestfit','-vector')
 
+%% viz it 2
+
+nperms = 5e3; 
+
+map_names_better = { 'Social' 'Motor' 'Gambling' 'Working memory' ...
+    'Language' 'Emotion' 'Relational' } ;
+
+for idx = 1:length(map_names)
+
+    filename = sprintf('./gen_data/spinres_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
+
+    ll = load(filename) ; 
+
+    perm_acc = ll.spin_results.perm_acc ;
+    recon_acc = ll.spin_results.recon_acc ;
+
+    set(gcf,'Position', [200 200 600 600]);
+
+    tiledlayout(2,1)
+
+    nexttile()
+    plot_manylines(perm_acc,'Color',[0 0.4470 0.7410 0.05],'LineWidth',2) 
+    hold on 
+    plot(recon_acc,'r','LineWidth',2)
+    hold off
+    
+    xlim([1 num_modes])
+    ylim([-0.25 1])
+
+    ylabel('recon accuracy')
+    xlabel('eigenmodes used for recon')
+
+    title(map_names_better{idx},'Interpreter','none')
+    
+    nexttile()
+    pvals = ( sum(bsxfun(@gt,perm_acc,recon_acc'),2) + 1) ./ (nperms+1) ; 
+    plot(pvals,'mo-','LineWidth',2,'MarkerSize',3)
+    
+    xlim([1 num_modes])
+    ylim([0 1])
+
+    % title([ 'p-value' map_names{idx}],'Interpreter','none')
+    
+    ylabel('p-value')
+
+    xlabel('eigenmodes used for recon')
+
+    outfile = [ './figures/spinnulls_eigenmodes_' ...
+        strrep(map_names_better{idx},' ','') '.pdf' ]  ; 
+    orient(gcf,'landscape')
+    print(gcf,'-dpdf',outfile,'-bestfit','-vector')
+    close(gcf)
+
+end

@@ -81,20 +81,16 @@ for map_idx = 1:length(map_names)
 end
 
 %% plot it
- 
-% plot(recon_acc,'LineWidth',2)
-% legend(mesh_interest,'Location','southeast')
-% xlabel('number of modes')
-% ylabel('reconstruction accuracy')
-
-%%
 
 tiledlayout(1,length(map_names))
 set(gcf,'Position', [200 200 2000 400]);
 
+map_names_better = { 'Social' 'Motor' 'Gambling' 'Working memory' ...
+    'Language' 'Emotion' 'Relational' } ;
+
 for idx = 1:length(map_names)
 
-    filename = sprintf('./gen_data/altsurfs_%s_%s-%s.mat',map_names{map_idx},surface_interest,hemisphere) ;
+    filename = sprintf('./gen_data/altsurfs_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ;
 
     ll = load(filename) ; 
 
@@ -102,9 +98,13 @@ for idx = 1:length(map_names)
 
     nexttile(idx)
     hold on 
-    plot(recon_acc,'LineWidth',2)
+    pp = plot(recon_acc,'LineWidth',2) ; 
     hold off
     
+    for pdx = 1:length(pp)
+        pp(pdx).Color(4) = 0.8 ;
+    end
+
     xlim([1 num_modes])
     ylim([-0.25 1])
 
@@ -120,7 +120,14 @@ for idx = 1:length(map_names)
         legend(mesh_interest,'Location','southeast')
     end
 
-    title(map_names{idx},'Interpreter','none')
+    title(map_names_better{idx},'Interpreter','none')
     
 
 end
+
+%% save it
+
+outfile = './figures/alt_eigenmodes.pdf' ; 
+orient(gcf,'landscape')
+print(gcf,'-dpdf',outfile,'-bestfit','-vector')
+
