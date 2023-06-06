@@ -260,3 +260,40 @@ for idx = 1:length(map_names)
     close(gcf)
 
 end
+
+%% draw some spun data
+
+filename = sprintf('./gen_data/spininds_%s-%s.mat',surface_interest,hemisphere) ; 
+spindat = load(filename) ; 
+
+loaded_data = load('./NSBLab_repo/data/figures_Nature/Figure1.mat') ;
+map_names = fieldnames(loaded_data.task_map_emp) ;
+dtr = loaded_data.task_map_emp.(map_names{1}) ; 
+dtr(~cortex) = min(dtr) * 1.1 ; 
+
+% Load sphere
+mesh_interest = 'sphere';
+[vertices, faces] = read_vtk(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%s_%s-%s.vtk', surface_interest, mesh_interest, hemisphere));
+surface_sphere.vertices = vertices';
+surface_sphere.faces = faces';
+
+rng(42)
+spind = spindat.spin_inds(:,randperm(size(spindat.spin_inds,2),16)) ; 
+
+set(gcf,'Position', [200 200 1200 1200]);
+tiledlayout(4,4)
+for idx = 1:16
+
+    nexttile
+    h = quick_trisurf(surface_sphere,dtr(spind(:,idx))) ; 
+    h.EdgeColor = "none";
+    material shiny
+    % camlight right
+    lighting gouraud
+    xticks('') ; yticks('') ; zticks('')
+
+end
+
+outfile = './figures/spin_data_example.pdf' ; 
+print(gcf,'-dpdf',outfile,'-vector','-bestfit')
+

@@ -168,7 +168,7 @@ for idx = 1:16
     h = quick_trisurf(randsurf) ;
     h.EdgeColor = "none";
     material shiny
-    camlight headlight
+    % camlight headlight
     lighting gouraud
     xticks('') ; yticks('') ; zticks('')
 
