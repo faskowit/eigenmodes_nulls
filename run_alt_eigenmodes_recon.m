@@ -82,10 +82,13 @@ end
 
 %% plot it
 
+loaded_data = load('./NSBLab_repo/data/figures_Nature/Figure1.mat') ;
+map_names = fieldnames(loaded_data.task_map_emp) ;
+
 tiledlayout(1,length(map_names))
 set(gcf,'Position', [200 200 2000 400]);
 
-map_names_better = { 'Social' 'Motor' 'Gambling' 'Working memory' ...
+map_names_better = { 'Social' 'Motor' 'Gambling' 'WM' ...
     'Language' 'Emotion' 'Relational' } ;
 
 for idx = 1:length(map_names)
@@ -98,7 +101,12 @@ for idx = 1:length(map_names)
 
     nexttile(idx)
     hold on 
-    pp = plot(recon_acc,'LineWidth',2) ; 
+    pp = plot(recon_acc,'LineWidth',1) ;
+    
+    for jdx = 1:length(pp)
+        pp(jdx).Color = [ pp(jdx).Color 0.5 ] ;
+    end
+
     hold off
     
     for pdx = 1:length(pp)
@@ -108,16 +116,19 @@ for idx = 1:length(map_names)
     xlim([1 num_modes])
     ylim([-0.25 1])
 
+    h = gca ;
+    h.XTick = [ 1 h.XTick] ; 
+
     if idx == 1
-        ylabel('recon accuracy')
+        ylabel('Reconstruction accuracy')
     end
 
     if idx == 4
-        xlabel('eigenmodes used for recon')
+        xlabel('Geometric eigenmodes used for reconstruction')
     end
 
     if idx == 7
-        legend(mesh_interest,'Location','southeast')
+        legend(mesh_interest,'Location','southeastoutside')
     end
 
     title(map_names_better{idx},'Interpreter','none')
@@ -131,3 +142,85 @@ outfile = './figures/alt_eigenmodes.pdf' ;
 orient(gcf,'landscape')
 print(gcf,'-dpdf',outfile,'-bestfit','-vector')
 
+%% and some viz of the other figures
+
+% some texture
+% [u,v] = pca(vertices,'NumComponents',2) ; 
+
+addpath('fcn/external/')
+
+loopover = { 'sphere' 'veryinflated' 'pial' 'midthickness' 'white' } ; 
+
+% compute curvature stuff
+curvStruct = struct() ; 
+
+for idx = 1:length(loopover)
+        
+    disp(idx)
+
+    sss = loopover{idx} ;
+
+    % Load midthickness
+    [vertices, faces] = read_vtk(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%s_%s-%s.vtk',surface_interest , sss, hemisphere));
+    surface_midthickness.vertices = vertices';
+    surface_midthickness.faces = faces';
+
+    % u = compute_normal(surface_midthickness.vertices,surface_midthickness.faces) ; 
+    opts.curvature_smoothing = 10 ; 
+        opts.verb = 0 ; 
+
+    [~,~,curvStruct(idx).cmin,curvStruct(idx).cmax,...
+        ~,curvStruct(idx).cgaus] = ...
+        compute_curvature(surface_midthickness.vertices,...
+        surface_midthickness.faces, opts) ; 
+
+end
+
+%%
+
+big_mins = [ curvStruct.cmin ] ;
+big_maxs = [ curvStruct.cmax ] ;
+
+tmp = abs(big_mins(:,2:5)) + abs(big_maxs(:,2:5)) ; 
+clim_min = mean(prctile(tmp,1));
+clim_max = mean(prctile(tmp,99));
+
+tiledlayout(1,5)
+
+for idx = 1:length(loopover)
+
+    nexttile
+        
+    sss = loopover{idx} ;
+
+    % Load midthickness
+    [vertices, faces] = read_vtk(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%s_%s-%s.vtk',surface_interest , sss, hemisphere));
+    surface_midthickness.vertices = vertices';
+    surface_midthickness.faces = faces';
+
+%     h = quick_trisurf(surface_midthickness,cgaus) ; 
+    c1 = curvStruct(idx).cmin ; 
+    c2 = curvStruct(idx).cmax ;
+    h = quick_trisurf(surface_midthickness,abs(c1)+abs(c2)) ; 
+    h.EdgeColor = "none";
+%     view([-100 0 10]);
+    view([-90 0 0]);
+    clim([clim_min clim_max])
+    material shiny
+    % camlight right
+    lighting gouraud
+    xticks('') ; yticks('') ; zticks('')
+    axis equal
+    axis off
+
+    title(sss)
+
+end
+
+%%
+
+outfile = './figures/alt_shapes.pdf' ; 
+orient(gcf,'landscape')
+print(gcf,'-dpdf',outfile,'-bestfit','-vector')
+
+%%

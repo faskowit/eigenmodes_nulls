@@ -22,7 +22,6 @@ d = sqrt( sum(normalf.^2,1) ); d(d<eps)=1;
 normalf = normalf ./ repmat( d, 3,1 );
 
 % unit normal to the vertex
-normal = zeros(3,nvert);
 for i=1:nface
     f = face(:,i);
     for j=1:3

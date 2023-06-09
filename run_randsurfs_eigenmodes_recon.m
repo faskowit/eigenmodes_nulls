@@ -177,3 +177,121 @@ end
 outfile = './figures/randsurfs_view_shapes.pdf' ; 
 orient(gcf,'landscape')
 print(gcf,'-dpdf',outfile,'-vector','-bestfit')
+
+%%
+
+surface_interest = 'fsLR_32k';
+hemisphere = 'lh';
+num_modes = 200 ; 
+
+loaded_data = load('./NSBLab_repo/data/figures_Nature/Figure1.mat') ;
+map_names = fieldnames(loaded_data.task_map_emp) ;
+
+tiledlayout(2,length(map_names))
+set(gcf,'Position', [200 200 1200 600]);
+
+nperms = 5e3; 
+
+map_names_better = { 'Social' 'Motor' 'Gambling' 'WM' ...
+    'Language' 'Emotion' 'Relational' } ;
+
+for idx = 1:length(map_names)
+
+    filename = sprintf('./gen_data/randsurfs_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ;
+
+    ll = load(filename) ; 
+
+    perm_acc = ll.blob_results.blobrecons ;
+    recon_acc = ll.blob_results.surfrecon ;
+
+    nexttile(idx)
+    [h, ppspan, cmap] = plot_manylines_aspatch(perm_acc) ; 
+    hold on 
+    plot(recon_acc,'r','LineWidth',1)
+    hold off
+       
+    xlim([1 num_modes])
+    ylim([-0.25 1])
+
+    h.XTick = [ 1 h.XTick] ; 
+
+    if idx == 1
+        ylabel('Reconstruction accuracy')
+    end
+
+    if idx == 4
+        xlabel('Geometric eigenmodes used for reconstruction')
+    end
+
+    title(map_names_better{idx},'Interpreter','none')
+    
+    nexttile(idx+length(map_names))
+    pvals = ( sum(bsxfun(@gt,perm_acc,recon_acc'),2) + 1) ./ (size(ll.blob_results.blobrecons,2)+1) ; 
+    plot(pvals,'.-','Color',[0.6350 0.0780 0.1840]	,'LineWidth',1,'MarkerSize',2) ; 
+    
+    xlim([1 num_modes])
+    ylim([0 1])
+
+    h = gca ;
+    h.XTick = [ 1 h.XTick] ; 
+
+    % title([ 'p-value' map_names{idx}],'Interpreter','none')
+
+    % plot sig?
+    sigpoints = (pvals < 0.05) ;
+    % disp([ num2str(sum(sigpoints)) ' low of ' num2str(min(pvals))])
+    hold on 
+    h = scatter(find(sigpoints),ones(sum(sigpoints),1).*.98, ...
+        10,[0.8500 0.3250 0.0980],'filled','diamond') ; 
+    hold off
+    
+    % put a lil text of how many sig
+    text(204,0.98,num2str(sum(sigpoints)),'FontSize',8,'Color',[0.8500 0.3250 0.0980])
+
+    if idx == 1
+        ylabel('p-value')
+    end
+
+    if idx == 4
+        xlabel('Geometric eigenmodes used for reconstruction')
+    end
+
+end
+
+%%
+
+outfile = './figures/randsurfs_eigenmodes_patchversion.pdf' ; 
+orient(gcf,'landscape')
+print(gcf,'-dpdf',outfile,'-bestfit','-vector')
+
+%% also viz randshape eigenmodes
+
+idx = 42 ; 
+[randsurf.vertices, randsurf.faces] = read_vtk(sprintf('./gen_data/rand_surfs/rand_surf_%03g.vtk',idx));
+
+% get it's eigenmodes 
+loadsurf = load(sprintf('gen_data/randsurfs_eigen/rand_surf_emode_200_%03g.txt',idx)) ; 
+
+pickout = [ 1 2 3 4 5 200 ] ; 
+
+tiledlayout(2,3)
+set(gcf,'Position', [200 200 1200 600]);
+
+for idx = pickout
+
+    nexttile()
+
+    h = quick_trisurf(randsurf,loadsurf(:,idx)) ;
+    h.EdgeColor = "none";
+    material shiny
+    % camlight headlight
+    lighting gouraud
+    xticks('') ; yticks('') ; zticks('')
+
+    axis square
+
+end
+
+outfile = './figures/randsurfs_eigenmodes_example.pdf' ; 
+orient(gcf,'landscape')
+print(gcf,'-dpdf',outfile,'-bestfit','-vector')
