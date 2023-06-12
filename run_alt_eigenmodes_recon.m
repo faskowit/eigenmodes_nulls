@@ -162,17 +162,17 @@ for idx = 1:length(loopover)
 
     % Load midthickness
     [vertices, faces] = read_vtk(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%s_%s-%s.vtk',surface_interest , sss, hemisphere));
-    surface_midthickness.vertices = vertices';
-    surface_midthickness.faces = faces';
+    surface_view.vertices = vertices';
+    surface_view.faces = faces';
 
     % u = compute_normal(surface_midthickness.vertices,surface_midthickness.faces) ; 
     opts.curvature_smoothing = 10 ; 
         opts.verb = 0 ; 
 
     [~,~,curvStruct(idx).cmin,curvStruct(idx).cmax,...
-        ~,curvStruct(idx).cgaus] = ...
-        compute_curvature(surface_midthickness.vertices,...
-        surface_midthickness.faces, opts) ; 
+        ~,curvStruct(idx).cgaus,curvStruct(idx).normal] = ...
+        compute_curvature(surface_view.vertices,...
+        surface_view.faces, opts) ; 
 
 end
 
@@ -195,13 +195,13 @@ for idx = 1:length(loopover)
 
     % Load midthickness
     [vertices, faces] = read_vtk(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%s_%s-%s.vtk',surface_interest , sss, hemisphere));
-    surface_midthickness.vertices = vertices';
-    surface_midthickness.faces = faces';
+    surface_view.vertices = vertices';
+    surface_view.faces = faces';
 
 %     h = quick_trisurf(surface_midthickness,cgaus) ; 
     c1 = curvStruct(idx).cmin ; 
     c2 = curvStruct(idx).cmax ;
-    h = quick_trisurf(surface_midthickness,abs(c1)+abs(c2)) ; 
+    h = quick_trisurf(surface_view,abs(c1)+abs(c2)) ; 
     h.EdgeColor = "none";
 %     view([-100 0 10]);
     view([-90 0 0]);
@@ -217,10 +217,136 @@ for idx = 1:length(loopover)
 
 end
 
-%%
-
 outfile = './figures/alt_shapes.pdf' ; 
 orient(gcf,'landscape')
 print(gcf,'-dpdf',outfile,'-bestfit','-vector')
 
+%% visualize the curvatures... but on the sphere
+
+tiledlayout(4,5)
+
+% Load sphere
+sss = 'sphere' ;
+[vertices, faces] = read_vtk(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%s_%s-%s.vtk',surface_interest , sss, hemisphere));
+surface_midthickness.vertices = vertices';
+surface_midthickness.faces = faces';
+
+for idx = 1:length(loopover)
+
+    nexttile
+        
+    sss = loopover{idx} ;
+
+%     h = quick_trisurf(surface_midthickness,cgaus) ; 
+    c1 = curvStruct(idx).cmin ; 
+    c2 = curvStruct(idx).cmax ;
+    h = quick_trisurf(surface_midthickness,abs(c1)+abs(c2)) ; 
+    h.EdgeColor = "none";
+%     view([-100 0 10]);
+    view([-90 0 0]);
+    clim([clim_min clim_max])
+    material shiny
+    % camlight right
+    lighting gouraud
+    xticks('') ; yticks('') ; zticks('')
+%     axis equal
+%     axis off
+
+    title(sss)
+
+end
+
+aaa = { 'x' 'y' 'z' } ; 
+
+for jdx = 1:3
+% and now to the normals
+for idx = 1:length(loopover)
+
+    nexttile
+        
+    sss = loopover{idx} ;
+
+    h = quick_trisurf(surface_midthickness,curvStruct(idx).normal(jdx,:)) ; 
+    h.EdgeColor = "none";
+%     view([-100 0 10]);
+    view([-90 0 0]);
+    clim([-1 1])
+    material shiny
+    % camlight right
+    lighting gouraud
+    xticks('') ; yticks('') ; zticks('')
+%     axis equal
+%     axis off
+
+    %title(sss)
+    if idx == 1
+        zlabel([ 'normals ' aaa{jdx} ])
+    end
+
+end
+end 
+
 %%
+
+outfile = './figures/shape_view_on_spheres.png' ; 
+orient(gcf,'landscape')
+% print(gcf,'-dpdf',outfile,'-bestfit','-vector')
+print(gcf,'-dpng',outfile)
+
+%% plot inds 
+
+% Load midthickness
+[vertices, faces] = read_vtk(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%s_%s-%s.vtk',surface_interest , 'sphere', hemisphere));
+surface_view_sphere.vertices = vertices';
+surface_view_sphere.faces = faces';
+
+for jdx = 1:3
+        
+    tiledlayout(2,5)
+
+    disp(jdx)
+
+for idx = 1:length(loopover)
+
+    disp(idx)
+
+    nexttile(idx)
+        
+    sss = loopover{idx} ;
+
+    % Load midthickness
+    [vertices, faces] = read_vtk(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%s_%s-%s.vtk',surface_interest , sss, hemisphere));
+    surface_view.vertices = vertices';
+    surface_view.faces = faces';
+
+    h = quick_trisurf(surface_view,surface_view.vertices(:,jdx)) ; 
+    h.EdgeColor = "none";
+%     view([-100 0 10]);
+    view([-90 0 0]);
+    material shiny
+    % camlight right
+    lighting gouraud
+    xticks('') ; yticks('') ; zticks('')
+    
+    nexttile(idx+5)
+
+    h = quick_trisurf(surface_view_sphere,surface_view.vertices(:,jdx)) ; 
+    h.EdgeColor = "none";
+%     view([-100 0 10]);
+    view([-90 0 0]);
+    material shiny
+    % camlight right
+    lighting gouraud
+    xticks('') ; yticks('') ; zticks('')
+end
+
+set(gcf,'Position', [200 200 1200 800]);
+
+outfile = ['./figures/shape_inds_spheres_' aaa{jdx} '.png'] ; 
+orient(gcf,'landscape')
+% print(gcf,'-dpdf',outfile,'-bestfit','-vector')
+print(gcf,'-dpng',outfile)
+
+close(gcf)
+
+end
