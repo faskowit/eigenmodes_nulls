@@ -129,10 +129,74 @@ for map_idx = 1:length(map_names)
 
 end
 
-%% viz it
+% %% viz it
+% 
+% tiledlayout(2,length(map_names))
+% set(gcf,'Position', [200 200 1200 600]);
+% 
+% for idx = 1:length(map_names)
+% 
+%     filename = sprintf('./gen_data/spinres_connectome_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
+% 
+%     ll = load(filename) ; 
+% 
+%     perm_acc = ll.spin_results.perm_acc ;
+%     recon_acc = ll.spin_results.recon_acc ;
+% 
+%     nexttile(idx)
+%     plot_manylines(perm_acc,'Color',[0 0.4470 0.7410 0.05],'LineWidth',2) 
+%     hold on 
+%     plot(recon_acc,'r','LineWidth',2)
+%     hold off
+%     
+%     xlim([1 num_modes])
+%     ylim([-0.25 1])
+% 
+%     if idx == 1
+%         ylabel('recon accuracy')
+%     end
+% 
+%     if idx == 4
+%         xlabel('eigenmodes used for recon')
+%     end
+% 
+%     title(map_names{idx},'Interpreter','none')
+%     
+%     nexttile(idx+length(map_names))
+%     pvals = ( sum(bsxfun(@gt,perm_acc,recon_acc'),2) + 1) ./ (nperms+1) ; 
+%     plot(pvals,'mo-','LineWidth',2,'MarkerSize',3)
+%     
+%     xlim([1 num_modes])
+%     ylim([0 1])
+% 
+%     % title([ 'p-value' map_names{idx}],'Interpreter','none')
+%     
+%     if idx == 1
+%         ylabel('p-value')
+%     end
+% 
+%     if idx == 4
+%         xlabel('eigenmodes used for recon')
+%     end
+% 
+% end
+
+%%
+
+surface_interest = 'fsLR_32k';
+hemisphere = 'lh';
+num_modes = 200 ; 
+
+loaded_data = load('./NSBLab_repo/data/figures_Nature/Figure1.mat') ;
+map_names = fieldnames(loaded_data.task_map_emp) ;
 
 tiledlayout(2,length(map_names))
 set(gcf,'Position', [200 200 1200 600]);
+
+nperms = 5e3; 
+
+map_names_better = { 'Social' 'Motor' 'Gambling' 'WM' ...
+    'Language' 'Emotion' 'Relational' } ;
 
 for idx = 1:length(map_names)
 
@@ -144,52 +208,64 @@ for idx = 1:length(map_names)
     recon_acc = ll.spin_results.recon_acc ;
 
     nexttile(idx)
-    plot_manylines(perm_acc,'Color',[0 0.4470 0.7410 0.05],'LineWidth',2) 
+    [h, ppspan, cmap] = plot_manylines_aspatch(perm_acc) ; 
     hold on 
-    plot(recon_acc,'r','LineWidth',2)
+    plot(recon_acc,'r','LineWidth',1)
     hold off
-    
+       
     xlim([1 num_modes])
     ylim([-0.25 1])
 
+    h.XTick = [ 1 h.XTick] ; 
+
     if idx == 1
-        ylabel('recon accuracy')
+        ylabel('Reconstruction accuracy')
     end
 
     if idx == 4
-        xlabel('eigenmodes used for recon')
+        xlabel('Connectome eigenmodes used for reconstruction')
     end
 
-    title(map_names{idx},'Interpreter','none')
+    title(map_names_better{idx},'Interpreter','none')
     
     nexttile(idx+length(map_names))
-    pvals = ( sum(bsxfun(@gt,perm_acc,recon_acc'),2) + 1) ./ (nperms+1) ; 
-    plot(pvals,'mo-','LineWidth',2,'MarkerSize',3)
+    pvals = ( sum(bsxfun(@gt,perm_acc,recon_acc'),2) + 1) ./ (size(perm_acc,2)+1) ; 
+    plot(pvals,'.-','Color',[0.6350 0.0780 0.1840]	,'LineWidth',1,'MarkerSize',2) ; 
     
     xlim([1 num_modes])
     ylim([0 1])
 
+    h = gca ;
+    h.XTick = [ 1 h.XTick] ; 
+
     % title([ 'p-value' map_names{idx}],'Interpreter','none')
+
+    % plot sig?
+    sigpoints = (pvals < 0.05) ;
+    % disp([ num2str(sum(sigpoints)) ' low of ' num2str(min(pvals))])
+    hold on 
+    h = scatter(find(sigpoints),ones(sum(sigpoints),1).*.98, ...
+        10,[0.8500 0.3250 0.0980],'filled','diamond') ; 
+    hold off
     
+    % put a lil text of how many sig
+    text(204,0.98,num2str(sum(sigpoints)),'FontSize',8,'Color',[0.8500 0.3250 0.0980])
+
     if idx == 1
         ylabel('p-value')
     end
 
     if idx == 4
-        xlabel('eigenmodes used for recon')
+        xlabel('Connectome eigenmodes used for reconstruction')
     end
 
 end
 
+
 %%
 
 % save the figure as pdf
-set(0, 'DefaultFigureRenderer', 'painters');
-mkdir([ pwd '/output_res/' ] )
-ff = sprintf('%s/output_res/eigenmodes_nulls_spin_mode_%s-%s.png',pwd,num2str(num_modes),hemisphere) ;
-print(gcf,'-dpng',ff);
-
-ff = sprintf('%s/output_res/eigenmodes_nulls_spin_mode_%s-%s.pdf',pwd,num2str(num_modes),hemisphere) ;
-print(gcf,'-dpdf',ff,'-bestfit');
-close(gcf)
+outfile = './figures/spinnulls_connmodes_patchversion.pdf' ; 
+orient(gcf,'landscape')
+print(gcf,'-dpdf',outfile,'-bestfit','-vector')
 
