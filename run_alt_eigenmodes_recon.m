@@ -80,7 +80,9 @@ for map_idx = 1:length(map_names)
 
 end
 
-%% plot it
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% VIZ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\
 
 loaded_data = load('./NSBLab_repo/data/figures_Nature/Figure1.mat') ;
 map_names = fieldnames(loaded_data.task_map_emp) ;
@@ -144,11 +146,7 @@ print(gcf,'-dpdf',outfile,'-bestfit','-vector')
 
 %% and some viz of the other figures
 
-% some texture
-% [u,v] = pca(vertices,'NumComponents',2) ; 
-
 addpath('fcn/external/')
-
 loopover = { 'sphere' 'veryinflated' 'pial' 'midthickness' 'white' } ; 
 
 % compute curvature stuff
@@ -306,47 +304,47 @@ for jdx = 1:3
 
     disp(jdx)
 
-for idx = 1:length(loopover)
-
-    disp(idx)
-
-    nexttile(idx)
-        
-    sss = loopover{idx} ;
-
-    % Load midthickness
-    [vertices, faces] = read_vtk(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%s_%s-%s.vtk',surface_interest , sss, hemisphere));
-    surface_view.vertices = vertices';
-    surface_view.faces = faces';
-
-    h = quick_trisurf(surface_view,surface_view.vertices(:,jdx)) ; 
-    h.EdgeColor = "none";
-%     view([-100 0 10]);
-    view([-90 0 0]);
-    material shiny
-    % camlight right
-    lighting gouraud
-    xticks('') ; yticks('') ; zticks('')
+    for idx = 1:length(loopover)
     
-    nexttile(idx+5)
-
-    h = quick_trisurf(surface_view_sphere,surface_view.vertices(:,jdx)) ; 
-    h.EdgeColor = "none";
-%     view([-100 0 10]);
-    view([-90 0 0]);
-    material shiny
-    % camlight right
-    lighting gouraud
-    xticks('') ; yticks('') ; zticks('')
-end
-
-set(gcf,'Position', [200 200 1200 800]);
-
-outfile = ['./figures/shape_inds_spheres_' aaa{jdx} '.png'] ; 
-orient(gcf,'landscape')
-% print(gcf,'-dpdf',outfile,'-bestfit','-vector')
-print(gcf,'-dpng',outfile)
-
-close(gcf)
+        disp(idx)
+    
+        nexttile(idx)
+            
+        sss = loopover{idx} ;
+    
+        % Load midthickness
+        [vertices, faces] = read_vtk(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%s_%s-%s.vtk',surface_interest , sss, hemisphere));
+        surface_view.vertices = vertices';
+        surface_view.faces = faces';
+    
+        h = quick_trisurf(surface_view,surface_view.vertices(:,jdx)) ; 
+        h.EdgeColor = "none";
+    %     view([-100 0 10]);
+        view([-90 0 0]);
+        material shiny
+        % camlight right
+        lighting gouraud
+        xticks('') ; yticks('') ; zticks('')
+        
+        nexttile(idx+5)
+    
+        h = quick_trisurf(surface_view_sphere,surface_view.vertices(:,jdx)) ; 
+        h.EdgeColor = "none";
+    %     view([-100 0 10]);
+        view([-90 0 0]);
+        material shiny
+        % camlight right
+        lighting gouraud
+        xticks('') ; yticks('') ; zticks('')
+    end
+    
+    set(gcf,'Position', [200 200 1200 800]);
+    
+    outfile = ['./figures/shape_inds_spheres_' aaa{jdx} '.png'] ; 
+    orient(gcf,'landscape')
+    % print(gcf,'-dpdf',outfile,'-bestfit','-vector')
+    print(gcf,'-dpng',outfile)
+    
+    close(gcf)
 
 end

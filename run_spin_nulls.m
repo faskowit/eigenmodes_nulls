@@ -6,11 +6,18 @@ clearvars
 addpath(genpath('./NSBLab_repo/functions_matlab'));
 addpath('./fcn/')
 
-%% Load surface files for visualization
+%% setup some variables
 
+nperms = 5e3; 
 surface_interest = 'fsLR_32k';
 hemisphere = 'lh';
 mesh_interest = 'midthickness';
+num_modes = 200;
+
+map_names_better = { 'Social' 'Motor' 'Gambling' 'WM' ...
+    'Language' 'Emotion' 'Relational' } ;
+
+%% Load surface files for visualization
 
 % Load midthickness
 [vertices, faces] = read_vtk(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%s_%s-%s.vtk', surface_interest, mesh_interest, hemisphere));
@@ -29,9 +36,6 @@ cortex = logical(dlmread(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%
 disp('loaded surfaces')
 
 %% Load connectome modes
-
-hemisphere = 'lh';
-num_modes = 200;
 
 if num_modes == 200
     eigenmodes = dlmread(sprintf('./osf_dl/template_eigenmodes/fsLR_32k_midthickness-%s_emode_%i.txt', hemisphere, num_modes));
@@ -73,8 +77,6 @@ else
 end
 
 %% Loop over zstat maps and do spin tests
-
-nperms = 5e3; 
 
 loaded_data = load('./NSBLab_repo/data/figures_Nature/Figure1.mat') ;
 map_names = fieldnames(loaded_data.task_map_emp) ;
@@ -133,133 +135,9 @@ for map_idx = 1:length(map_names)
 
 end
 
-% %% viz it
-% 
-% tiledlayout(2,length(map_names))
-% set(gcf,'Position', [200 200 1200 600]);
-% 
-% nperms = 5e3; 
-% 
-% map_names_better = { 'Social' 'Motor' 'Gambling' 'Working memory' ...
-%     'Language' 'Emotion' 'Relational' } ;
-% 
-% for idx = 1:length(map_names)
-% 
-%     filename = sprintf('./gen_data/spinres_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
-% 
-%     ll = load(filename) ; 
-% 
-%     perm_acc = ll.spin_results.perm_acc ;
-%     recon_acc = ll.spin_results.recon_acc ;
-% 
-%     nexttile(idx)
-%     plot_manylines(perm_acc,'Color',[0 0.4470 0.7410 0.05],'LineWidth',2) 
-%     hold on 
-%     plot(recon_acc,'r','LineWidth',2)
-%     hold off
-%     
-%     xlim([1 num_modes])
-%     ylim([-0.25 1])
-% 
-%     if idx == 1
-%         ylabel('recon accuracy')
-%     end
-% 
-%     if idx == 4
-%         xlabel('eigenmodes used for recon')
-%     end
-% 
-%     title(map_names_better{idx},'Interpreter','none')
-%     
-%     nexttile(idx+length(map_names))
-%     pvals = ( sum(bsxfun(@gt,perm_acc,recon_acc'),2) + 1) ./ (nperms+1) ; 
-%     plot(pvals,'mo-','LineWidth',2,'MarkerSize',3)
-%     
-%     xlim([1 num_modes])
-%     ylim([0 1])
-% 
-%     % title([ 'p-value' map_names{idx}],'Interpreter','none')
-%     
-%     if idx == 1
-%         ylabel('p-value')
-%     end
-% 
-%     if idx == 4
-%         xlabel('eigenmodes used for recon')
-%     end
-% 
-% end
-% 
-% %%
-% 
-% % % save the figure as pdf
-% % set(0, 'DefaultFigureRenderer', 'painters');
-% % mkdir([ pwd '/output_res/' ] )
-% % ff = sprintf('%s/output_res/eigenmodes_nulls_spin_mode_%s-%s.png',pwd,num2str(num_modes),hemisphere) ;
-% % print(gcf,'-dpng',ff);
-% % 
-% % ff = sprintf('%s/output_res/eigenmodes_nulls_spin_mode_%s-%s.pdf',pwd,num2str(num_modes),hemisphere) ;
-% % print(gcf,'-dpdf',ff,'-bestfit');
-% % close(gcf)
-% 
-% outfile = './figures/spinnulls_eigenmodes.pdf' ; 
-% orient(gcf,'landscape')
-% print(gcf,'-dpdf',outfile,'-bestfit','-vector')
-
-% %% viz it separately
-% 
-% nperms = 5e3; 
-% 
-% map_names_better = { 'Social' 'Motor' 'Gambling' 'Working memory' ...
-%     'Language' 'Emotion' 'Relational' } ;
-% 
-% for idx = 1:length(map_names)
-% 
-%     filename = sprintf('./gen_data/spinres_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
-% 
-%     ll = load(filename) ; 
-% 
-%     perm_acc = ll.spin_results.perm_acc ;
-%     recon_acc = ll.spin_results.recon_acc ;
-% 
-%     set(gcf,'Position', [200 200 600 600]);
-% 
-%     tiledlayout(2,1)
-% 
-%     nexttile()
-%     plot_manylines(perm_acc,'Color',[0 0.4470 0.7410 0.05],'LineWidth',2) 
-%     hold on 
-%     plot(recon_acc,'r','LineWidth',2)
-%     hold off
-%     
-%     xlim([1 num_modes])
-%     ylim([-0.25 1])
-% 
-%     ylabel('recon accuracy')
-%     xlabel('eigenmodes used for recon')
-% 
-%     title(map_names_better{idx},'Interpreter','none')
-%     
-%     nexttile()
-%     pvals = ( sum(bsxfun(@gt,perm_acc,recon_acc'),2) + 1) ./ (nperms+1) ; 
-%     plot(pvals,'mo-','LineWidth',2,'MarkerSize',3)
-%     
-%     xlim([1 num_modes])
-%     ylim([0 1])
-% 
-%     % title([ 'p-value' map_names{idx}],'Interpreter','none')
-%     
-%     ylabel('p-value')
-% 
-%     xlabel('eigenmodes used for recon')
-% 
-%     outfile = [ './figures/spinnulls_eigenmodes_' ...
-%         strrep(map_names_better{idx},' ','') '.pdf' ]  ; 
-%     orient(gcf,'landscape')
-%     print(gcf,'-dpdf',outfile,'-bestfit','-vector')
-%     close(gcf)
-% 
-% end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% VIZ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% draw some spun data
 
@@ -360,18 +238,13 @@ xticks('') ; yticks('') ; zticks('')
 outfile = './figures/spun_sphere.pdf' ; 
 print(gcf,'-dpdf',outfile,'-vector','-bestfit')
 
-%% viz it
+%% viz it as PATCH! PREFERRED METHOD
 
 loaded_data = load('./NSBLab_repo/data/figures_Nature/Figure1.mat') ;
 map_names = fieldnames(loaded_data.task_map_emp) ;
 
 tiledlayout(2,length(map_names))
 set(gcf,'Position', [200 200 1200 600]);
-
-nperms = 5e3; 
-
-map_names_better = { 'Social' 'Motor' 'Gambling' 'WM' ...
-    'Language' 'Emotion' 'Relational' } ;
 
 for idx = 1:length(map_names)
 
@@ -440,9 +313,7 @@ outfile = './figures/spinnulls_eigenmodes_patchversion.pdf' ;
 orient(gcf,'landscape')
 print(gcf,'-dpdf',outfile,'-bestfit','-vector')
 
-%%
-
-% visualize the colormap
+%% visualize the colormap
 figure
 imagesc(ppspan) ; cb = colorbar ; colormap(cmap)
 cb.Label.String = 'Data range' ; 

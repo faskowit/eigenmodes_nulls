@@ -26,3 +26,4 @@ if size(verts,2) > size(verts,1)
 end
 
 h = trisurf(faces,verts(:,1),verts(:,2),verts(:,3),data) ; 
+h.EdgeColor = 'none' ; 

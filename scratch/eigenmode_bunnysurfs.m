@@ -24,25 +24,36 @@ cortex = logical(dlmread(sprintf('./NSBLab_repo/data/template_surfaces_volumes/%
 % what fraction of the midthick surface is the "hole", so we can approx.
 medialwall_frac = sum(cortex==0)/length(cortex) ;
 
-%% read bunny
+% %% read bunny
+% 
+% [F,V] = stanford_bunny() ;
+% F = 3036x3, V = 1520 x
+%
+% %% Display bunny
+% 
+% clf;
+% trisurf(F,V(:,1),V(:,2),V(:,3),flipud(1:length(F)))
 
-[F,V] = stanford_bunny() ;
+%% read remesh bunny
 
-%% Display bunny
+remeshbunny = struct() ; 
+[remeshbunny.vertices, remeshbunny.faces] = read_vtk('/Users/faskowitzji/joshstuff/sandbox/bunny_remesh.vtk');
 
-clf;
-trisurf(F,V(:,1),V(:,2),V(:,3),flipud(1:length(F)))
+quick_trisurf(remeshbunny)
 
-%% now try to upsample the bunny
+%% now try to downsample the bunny
 
-[VV,FF] = upsample(V,F,'Iterations',3) ; 
+% [VV,FF] = upsample(V,F,'Iterations',3) ; 
 
 % code copied from:
 % https://www.numerical-tours.com/matlab/meshwav_3_simplification/
 
-faces1 = FF';
-vertex1 = VV';
-vertex0 = VV' ;
+% faces1 = FF';
+% vertex1 = VV';
+% vertex0 = VV' ;
+faces1 = remeshbunny.faces .* 1;
+vertex1 = remeshbunny.vertices .* 1;
+vertex0 = remeshbunny.vertices .* 1;
 while sum(~all(isinf(vertex1))) > length(cortex)
     edges = compute_edges(faces1);
     D = vertex0(:,edges(1,:)) - vertex0(:,edges(2,:));
@@ -66,6 +77,8 @@ V = vertex1' ;
 [newverts,i,j] = unique(V, 'rows');
 newverts = newverts(1:end-1,:) ; % get rid of the infs
 newfaces = [ j(F(:,1)) j(F(:,2)) j(F(:,3)) ] ; 
+
+%%
 
 trisurf(newfaces,newverts(:,1),newverts(:,2),newverts(:,3))
 
