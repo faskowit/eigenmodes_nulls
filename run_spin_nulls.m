@@ -321,3 +321,142 @@ cb.Label.String = 'Data range' ;
 outfile = './figures/spinnulls_eigenmodes_patchversion_cb.pdf' ; 
 orient(gcf,'landscape')
 print(gcf,'-dpdf',outfile,'-bestfit','-vector')
+
+%% get laplacian of surface
+
+filename = sprintf('./gen_data/surflap_modes-%s_%s-%s.mat',num2str(num_modes),surface_interest,hemisphere) ; 
+
+if ~isfile(filename)
+
+    surf_conn = calc_surface_connectivity(surface_midthickness) ; 
+    surf_conn = surf_conn(cortex,cortex) ; 
+    [~,surf_lap] = calc_LaplacianMatrix(surf_conn) ; 
+    [surflap_em,~] = eigs(surf_lap,num_modes,'smallestabs') ; 
+    save(filename,'surflap_em')
+else
+    load(filename)
+end
+
+%% get some power based on laplacian basis
+% a lil extra analysis followed by more viz
+
+nreps = 500 ; 
+surpower = cell(length(map_names_better),1) ; 
+emppower = cell(length(map_names_better),1) ; 
+
+loaded_data = load('./NSBLab_repo/data/figures_Nature/Figure1.mat') ;
+map_names = fieldnames(loaded_data.task_map_emp) ;
+
+for idx = 1:length(map_names_better)
+
+
+    dtr = loaded_data.task_map_emp.(map_names{idx}) ; 
+    %dtr = dtr(cortex) ;
+
+    % the emp
+    [~,tmp_coefs] = calc_eigdecomp_recon_acc(dtr(cortex),surflap_em,num_modes) ; 
+    [~,emppower{idx}] = calc_power_spectrum(tmp_coefs(:,num_modes)) ;  
+
+    % and the surr
+
+    tmp_betas = nan(200,nreps) ; 
+    % get nreps rotated data
+    spin_inds_smaller = spin_inds(:,randperm(size(spin_inds,2),nreps)) ; 
+
+    sur_dat_loop = cell2mat(...
+        arrayfun(@(x_) dtr(spin_inds_smaller(:,x_)), 1:nreps, ...
+        'UniformOutput', false)) ;
+
+    parfor jdx = 1:nreps
+
+        disp([num2str(idx) ' - ' num2str(jdx)])
+  
+        tmp_sur = sur_dat_loop(:,jdx) ;
+
+        perm_mask = (cortex & ~isnan(tmp_sur)) ; 
+
+        [~,sur_coefs] = calc_eigdecomp_recon_acc(...
+            tmp_sur(perm_mask),surflap_em(perm_mask(cortex),:),num_modes) ; 
+    
+        [~,tmp_betas(:,jdx)] = calc_power_spectrum(sur_coefs(:,num_modes)) ;  
+
+    end
+
+    surpower{idx} = tmp_betas ; 
+
+end
+
+%% map sim
+
+map_sim = cell(length(map_names),1) ; 
+
+for idx = 1:length(map_names)
+
+    disp(idx)
+
+    dtr = loaded_data.task_map_emp.(map_names{idx}) ; 
+    % dtr = dtr(cortex) ;
+
+    spin_inds_smaller = spin_inds(:,randperm(size(spin_inds,2),nperms)) ; 
+    sur_dat_loop = cell2mat(...
+        arrayfun(@(x_) dtr(spin_inds_smaller(:,x_)), 1:nperms, ...
+        'UniformOutput', false)) ;
+
+
+    map_sim{idx} = arrayfun(@(x_) ...
+        corr(sur_dat_loop(:,x_),dtr,'rows','complete'), 1:nperms ) ; 
+
+end
+
+%% take a looksie
+
+tiledlayout(2,length(map_names))
+set(gcf,'Position', [200 200 1200 600]);
+cmap = turbo(length(map_names)+8) ; 
+cmap = cmap((end-7):end,:); 
+
+for idx = 1:length(map_names)
+    
+    nexttile(idx)
+
+    ccc = cmap(idx,:) ; 
+    plot(log(surpower{idx}),'Color',[ ccc 0.1 ])
+    hold on
+    plot(log(emppower{idx}),'Color',[0.5 0.5 0.5 0.5],'LineWidth',0.5)
+    hold off
+
+    ylim([-30 0])
+
+    title(map_names_better{idx},'Interpreter','none')
+
+    if idx == 1
+        ylabel('Normalized power (log scale) ')
+    end
+
+    if idx == 4
+        xlabel('Mode')
+    end
+
+    nexttile(idx+length(map_names))
+
+    h = histogram(map_sim{idx},25,"Normalization","count") ; 
+    h.FaceColor = ccc ; 
+    h.EdgeAlpha = 0.1 ; 
+    xlim([-0.7 0.7])
+    ylim([0 1000])
+
+    if idx == 1
+        ylabel('Count')
+    end
+
+    if idx == 4
+        xlabel('Correlation of surrograte to empirical map')
+    end
+end
+
+%%
+
+outfile = './figures/spinnulls_spatial_freq.pdf' ; 
+orient(gcf,'landscape')
+print(gcf,'-dpdf',outfile,'-bestfit','-vector')
+close(gcf)

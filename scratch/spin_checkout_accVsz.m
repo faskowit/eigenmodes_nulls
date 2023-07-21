@@ -74,8 +74,11 @@ end
 
 %% Loop over zstat maps and do spin tests
 
-% nperms = 5e3; 
-nperms = 1000 ;  
+nperms = 5e3; 
+% nperms = 1000 ;  
+
+trpvals = ceil(logspace(log10(2),log10(200),10)) ; 
+trpvals(end) = 200 ; 
 
 loaded_data = load('./NSBLab_repo/data/figures_Nature/Figure1.mat') ;
 map_names = fieldnames(loaded_data.task_map_emp) ;
@@ -90,7 +93,7 @@ for map_idx = 1:length(map_names)
     % make a smaller version to send to parfor
     spin_inds_smaller = spin_inds(:,randperm(size(spin_inds,2),nperms)) ; 
     
-    perm_acc_n_mwsize = nan(nperms,2) ; 
+    perm_acc_n_mwsize = nan(nperms,length(trpvals)+1) ; 
 
     % measure reconstruct accuracy on spin data
     parfor idx = 1:nperms
@@ -105,23 +108,26 @@ for map_idx = 1:length(map_names)
         tmp = calc_eigdecomp_recon_acc(tmp_surr_data(perm_mask),...
                                            eigenmodes(perm_mask,:),num_modes) ; 
         
-        perm_acc_n_mwsize(idx,:) = [ trapz(1:200,tmp) sum(perm_mask,'all') ] ;
+        perm_acc_n_mwsize(idx,:) = [ arrayfun(@(x_) trapz(tmp(1:x_)),trpvals) ...
+            sum(perm_mask,'all') ] ;
 
     end
 
-    perm_acc_v_sz(map_idx).acc = perm_acc_n_mwsize(:,1) ;
-    perm_acc_v_sz(map_idx).sz = perm_acc_n_mwsize(:,2) ;
+    perm_acc_v_sz(map_idx).acc = perm_acc_n_mwsize(:,1:length(trpvals)) ;
+    perm_acc_v_sz(map_idx).sz = perm_acc_n_mwsize(:,length(trpvals)+1) ;
 
 end
 
+%%
+
 filename = sprintf('./gen_data/spin_accVsz_%s-%s.mat',surface_interest,hemisphere) ; 
 % and then save it
-save(filename,"perm_acc_n_mwsize")
+save(filename,"perm_acc_v_sz")
 
 %% viz it
 
-tiledlayout(1,length(map_names))
-set(gcf,'Position', [200 200 1200 600]);
+tiledlayout(3,length(map_names))
+set(gcf,'Position', [200 200 1300 600]);
 
 map_names_better = { 'Social' 'Motor' 'Gambling' 'WM' ...
     'Language' 'Emotion' 'Relational' } ;
@@ -129,22 +135,58 @@ map_names_better = { 'Social' 'Motor' 'Gambling' 'WM' ...
 floorsz = length(cortex) - (sum(~cortex)*2) ; 
 maxsz = sum(cortex) ; 
 
+cmap = flipud(winter(10)) ; 
+piktrap = [ 4 9 10 ] ; 
+
 for idx = 1:length(map_names)
 
-    nexttile
+    for jdx = 1:length(piktrap) 
 
-    x = perm_acc_v_sz(idx).acc ; 
-    y = perm_acc_v_sz(idx).sz ; 
+        xx = idx + ((jdx-1)*length(map_names))  
+        nexttile(xx)
 
-    scatter_w_rho(x,y) ; 
 
-    yline(floorsz,'Color','r','LineWidth',2)
-    yline(maxsz,'Color','c','LineWidth',2)
+        pp = piktrap(jdx) ; 
 
-    title(map_names_better{idx})
+        x = perm_acc_v_sz(idx).acc(:,pp) ; 
+        y = perm_acc_v_sz(idx).sz ; 
+    
+        [s,tt] = scatter_w_rho(x,y,'filled','o','MarkerFaceColor',cmap(jdx,:)) ; 
+        tt.FontSize = 7 ; 
+        tt.Position = [0.015,0.05] ;
+        s.MarkerFaceAlpha = 0.2 ;
+
+%         h = histogram2(x(:),y(:),[10 10],'DisplayStyle','tile');
+%         h.EdgeColor = 'none' ; 
+%         grid off
+        
+        yline(floorsz,'Color','r','LineWidth',2)
+        yline(maxsz,'Color','c','LineWidth',2)
+
+        ylim([26.25e3 30e3])
+
+        if jdx == 1
+            title( {map_names_better{idx} ' ' } )
+        end
+
+        if idx == 4 
+            xlabel([ 'Recon acc. area after ' num2str(trpvals(pp)) ' modes'])
+        end
+
+        if idx == 1
+            ylabel('Num. vertices in recon.')
+        end
+
+    end
     
 end
+
+%%
 
 outfile = './figures/spin_checkout_accVsz.pdf' ; 
 orient(gcf,'landscape')
 print(gcf,'-dpdf',outfile,'-vector','-bestfit')
+
+outfile = './figures/spin_checkout_accVsz.png' ; 
+orient(gcf,'landscape')
+print(gcf,'-dpng',outfile)

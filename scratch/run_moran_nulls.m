@@ -39,10 +39,14 @@ num_modes = 200;
 tic
 filename = sprintf('./gen_data/moranMEM_BS_modes-%s_%s-%s.mat',num2str(num_modes),surface_interest,hemisphere) ; 
 if ~isfile(filename)
+    disp('computing MEM')
+    datestr(now,'HH:MM:SS')
     MEM = compute_mem(brainspace_midthick,...
-        'mask',~cortex,'n_ring',50) ; 
+        'mask',~cortex,'n_ring',1e4,...
+        'distance_metric','geodesic') ; 
     save(filename,"MEM")
 else
+    disp('loading MEM')
     load(filename)
 end
 toc
@@ -142,6 +146,7 @@ disp('loaded eigenmodes')
 
 % Loop over zstat maps and do moran tests
 
+% nperms = 1e3 ; 
 nperms = 5e3; 
 % nperms  = 100 ; 
 
@@ -149,6 +154,8 @@ loaded_data = load('./NSBLab_repo/data/figures_Nature/Figure1.mat') ;
 map_names = fieldnames(loaded_data.task_map_emp) ;
 
 eigenmodes_nocort = eigenmodes(cortex,:) ;
+
+clear eigenmodes
 
 for map_idx = 1:length(map_names)
 
@@ -168,10 +175,11 @@ for map_idx = 1:length(map_names)
     if ~isfile(filename)
 
         % compute original accuracy
-        moran_results.recon_acc = calc_eigdecomp_recon_acc(data_to_reconstruct(cortex),eigenmodes(cortex,:),num_modes) ; 
+        moran_results.recon_acc = calc_eigdecomp_recon_acc(data_to_reconstruct(cortex),eigenmodes_nocort,num_modes) ; 
         
         % make the randomized data
         rng(map_idx)
+        disp('generating moran dat')
         surr_data_tmp = moran_randomization(data_to_reconstruct(~~cortex),...
                                 MEM,nperms,'procedure','singleton') ;
         surr_data = nan(length(cortex),nperms) ; 
@@ -183,6 +191,8 @@ for map_idx = 1:length(map_names)
         perm_acc_moran = nan(num_modes,nperms) ; 
 
         surr_data_nocort = surr_data(cortex,:) ;
+
+        clear surr_data
 
         % measure reconstruct accuracy on spin data
         parfor idx = 1:nperms
@@ -201,8 +211,10 @@ for map_idx = 1:length(map_names)
         % record results in the struct 
         moran_results.perm_acc = perm_acc_moran ; 
 
+        % moran_results.surr_dat = surr_data_nocort ;
+
         % save it
-        save(filename,'moran_results')
+        save(filename,'moran_results','surr_data_nocort')
 
     end
 
@@ -267,8 +279,6 @@ map_names = fieldnames(loaded_data.task_map_emp) ;
 tiledlayout(2,length(map_names))
 set(gcf,'Position', [200 200 1200 600]);
 
-nperms = 5e3; 
-
 map_names_better = { 'Social' 'Motor' 'Gambling' 'WM' ...
     'Language' 'Emotion' 'Relational' } ;
 
@@ -276,7 +286,7 @@ for idx = 1:length(map_names)
 
     filename = sprintf('./gen_data/moranres_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
 
-    ll = load(filename) ; 
+    ll = load(filename,'moran_results') ; 
 
     perm_acc = ll.moran_results.perm_acc ;
     recon_acc = ll.moran_results.recon_acc ;
@@ -335,4 +345,189 @@ for idx = 1:length(map_names)
 
 end
 
+%% save figure 
+
+outfile = './figures/moranres_eigenmodes_patchversion.pdf' ; 
+orient(gcf,'landscape')
+print(gcf,'-dpdf',outfile,'-bestfit','-vector')
+close(gcf)
+
+
+%% example moran data
+% 
+% G = surface_to_graph(brainspace_midthick,'geodesic',~cortex,1) ; 
+% ddd = data_to_reconstruct(cortex) ; 
+% targ_std = mean(arrayfun(@(x_) std(ddd(G.neighbors(x_))),1:size(G.Nodes,1))) ;
+
+% h = quick_trisurf(surface_midthickness,data_to_reconstruct) ; 
+% h.EdgeColor = 'none'
+% view([-45 12 -5])
+
+%% look at some stuff
+
+% tiledlayout(3,3)
+% set(gcf,'Position', [200 200 800 800]);
+% 
+% %figure
+% for idx = 42:50
+%     nexttile
+% 
+%     disp(idx)
+% 
+%     ss = nan(length(cortex),1) ;
+%     s = eigenmodes_nocort(:,idx) ; 
+%     ss(cortex) = s ; 
+%     h = quick_trisurf(surface_midthickness,ss)
+%     h.EdgeColor = 'none' ; 
+%     view([-75 11 -5])
+%     material shiny
+%     % camlight headlight
+%     lighting gouraud
+%     xticks('') ; yticks('') ; zticks('')
+%     axis square
+% 
+%     tmp = mean(arrayfun(@(x_) std(s(G.neighbors(x_))),1:size(G.Nodes,1)),'omitnan') ; 
+% 
+%     text(0.05,0.1,0,num2str(tmp),'Units','normalized')
+% end
+
+%%
+
+% mmm = moran_randomization(data_to_reconstruct(~~cortex),MEM,1,'procedure','pair') ;
+% 
+% ss = nan(length(cortex),1) ;
+% ss(cortex) = mmm ; 
+% h = quick_trisurf(surface_midthickness,ss)
+% h.EdgeColor = 'none'
+% view([-45 12 -5])
+% waitforbuttonpress
+
+%% get laplacian of surface
+
+filename = sprintf('./gen_data/surflap_modes-%s_%s-%s.mat',num2str(num_modes),surface_interest,hemisphere) ; 
+
+if ~isfile(filename)
+
+    surf_conn = calc_surface_connectivity(surface_midthickness) ; 
+    surf_conn = surf_conn(cortex,cortex) ; 
+    [~,surf_lap] = calc_LaplacianMatrix(surf_conn) ; 
+    [surflap_em,~] = eigs(surf_lap,num_modes,'smallestabs') ; 
+    save(filename,'surflap_em')
+else
+    load(filename)
+end
+
+%% look at the null similarities?
+
+
+loaded_data = load('./NSBLab_repo/data/figures_Nature/Figure1.mat') ;
+map_names = fieldnames(loaded_data.task_map_emp) ;
+
+
+nreps = 500 ; 
+surpower = cell(length(map_names),1) ; 
+emppower = cell(length(map_names),1) ; 
+
+for idx = 1:length(map_names)
+
+    filename = sprintf('./gen_data/moranres_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
+
+    ll = load(filename,'surr_data_nocort') ; 
+
+    dtr = loaded_data.task_map_emp.(map_names{idx}) ; 
+    dtr = dtr(cortex) ;
+
+    % the emp
+    [~,tmp_coefs] = calc_eigdecomp_recon_acc(dtr,surflap_em,num_modes) ; 
+    [~,emppower{idx}] = calc_power_spectrum(tmp_coefs(:,num_modes)) ;  
+
+    % and the surr
+
+    sur_dat_loop = ll.surr_data_nocort(:,randi(5000,[nreps 1])) ; 
+    tmp_betas = nan(200,nreps) ; 
+
+    parfor jdx = 1:nreps
+
+        disp([num2str(idx) ' - ' num2str(jdx)])
+  
+        [~,sur_coefs] = calc_eigdecomp_recon_acc(sur_dat_loop(:,jdx),surflap_em,num_modes) ; 
+    
+        [~,tmp_betas(:,jdx)] = calc_power_spectrum(sur_coefs(:,num_modes)) ;  
+
+    end
+
+    surpower{idx} = tmp_betas ; 
+
+end
+
+%% map sim
+
+map_sim = cell(length(map_names),1) ; 
+
+for idx = 1:length(map_names)
+
+    disp(idx)
+
+    filename = sprintf('./gen_data/moranres_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
+    ll = load(filename,'surr_data_nocort') ; 
+
+    dtr = loaded_data.task_map_emp.(map_names{idx}) ; 
+    dtr = dtr(cortex) ;
+
+    map_sim{idx} = arrayfun(@(x_) corr(ll.surr_data_nocort(:,x_),dtr), 1:size(ll.surr_data_nocort,2) ) ; 
+
+end
+
+%% take a looksie
+
+tiledlayout(2,length(map_names))
+set(gcf,'Position', [200 200 1200 600]);
+cmap = turbo(length(map_names)+8) ; 
+cmap = cmap((end-7):end,:); 
+
+for idx = 1:length(map_names)
+    
+    nexttile(idx)
+
+    ccc = cmap(idx,:) ; 
+    plot(log(surpower{idx}),'Color',[ ccc 0.1 ])
+    hold on
+    plot(log(emppower{idx}),'Color',[0.5 0.5 0.5 0.5],'LineWidth',0.5)
+    hold off
+
+    ylim([-35 0])
+
+    title(map_names_better{idx},'Interpreter','none')
+
+    if idx == 1
+        ylabel('Normalized power (log scale) ')
+    end
+
+    if idx == 4
+        xlabel('Mode')
+    end
+
+    nexttile(idx+length(map_names))
+
+    h = histogram(map_sim{idx},25,"Normalization","count") ; 
+    h.FaceColor = ccc ; 
+    h.EdgeAlpha = 0.1 ; 
+    xlim([-0.7 0.7])
+    ylim([0 500])
+
+    if idx == 1
+        ylabel('Count')
+    end
+
+    if idx == 4
+        xlabel('Correlation of surrograte to empirical map')
+    end
+end
+
+%%
+
+outfile = './figures/moranres_spatial_freq.pdf' ; 
+orient(gcf,'landscape')
+print(gcf,'-dpdf',outfile,'-bestfit','-vector')
+close(gcf)
 

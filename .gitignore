@@ -144,3 +144,6 @@ gen_data/rand_surfs/*
 gen_data/randsurfs_eigen/*
 figures/*
 gen_data/moranbk*
+./junk/*
+./junk
+junk*
