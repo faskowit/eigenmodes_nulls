@@ -386,7 +386,7 @@ for idx = 1:length(map_names_better)
 
 end
 
-%% map sim
+%% map surrogate map similarity to empirical map
 
 map_sim = cell(length(map_names),1) ; 
 
@@ -408,7 +408,7 @@ for idx = 1:length(map_names)
 
 end
 
-%% take a looksie
+%% take a looksie, plot the power + correlation with emp
 
 tiledlayout(2,length(map_names))
 set(gcf,'Position', [200 200 1200 600]);

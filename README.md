@@ -16,4 +16,6 @@ Figure 2 uses geoemtric eigenmodes computed from an array of different surfaces 
 
 1. Run `make_random_surfs.m` to generate randomly perturbed spherical meshes.
 2. Run `eigenmode_calculation_othersurfs.sh` and `eigenmode_calculation_randsurfs.sh` to compute the geometric eigenmodes for the array of different surfaces. This step is time consuming (we recommend running it on a high-performance computing platform) and requires the `LaPy` Python package.
-5. Run  `run_alt_eigenmodes_recon.m` and `run_randsurfs_eigenmodes_recon.m`.
+3. Run  `run_alt_eigenmodes_recon.m` and `run_randsurfs_eigenmodes_recon.m`.
+
+and for additional analyses checkout the files in `extra_scripts`. 
