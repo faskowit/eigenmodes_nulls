@@ -32,52 +32,20 @@ brainspace_midthick = struct() ;
 brainspace_midthick.tri = surface_midthickness.faces ;  
 brainspace_midthick.coord = surface_midthickness.vertices' ; 
 
-%% load moran mem
-
-hemisphere = 'lh';
-num_modes = 200;
-
-tic
-filename = sprintf('./gen_data/moranMEM5000_BS_modes-%s_%s-%s.mat',num2str(num_modes),surface_interest,hemisphere) ; 
-if ~isfile(filename)
-    
-    filenameMEM = sprintf('./gen_data/moranMEM_BS_modes-%s_%s-%s.mat',num2str(num_modes),surface_interest,hemisphere) ; 
-    if ~isfile(filenameMEM)
-        disp('computing MEM')
-        datestr(now,'HH:MM:SS')
-        MEM = compute_mem(brainspace_midthick,...
-            'mask',~cortex,'n_ring',1e4,...
-            'distance_metric','geodesic') ; 
-        save(filename,"MEM")
-    else
-        load(filenameMEM)
-    end
-    disp('saving MEM 5000')
-    MEMredu = MEM(:,1:5000) ; 
-    save(filenameMEM,'MEMredu')
-    clear MEM
-else
-    disp('loading MEM 5000')
-    load(filename)
-end
-toc
-disp('finished')
-
 %% Load eigenmodes
 
-if num_modes == 200
-    eigenmodes = dlmread(sprintf('./osf_dl/template_eigenmodes/fsLR_32k_midthickness-%s_emode_%i.txt', hemisphere, num_modes));
-elseif num_modes == 50
-    eigenmodes = dlmread(sprintf('./NSBLab_repo/data/examples/fsLR_32k_midthickness-%s_emode_%i.txt', hemisphere, num_modes));
-else
-    error('dont have that number of modes, please')
-end
+hemisphere = 'lh';
+num_modes = 5000;
+
+eigenmodes = dlmread(sprintf('./gen_data/fsLR_32k_midthickness-%s_emode_%i.txt', hemisphere, num_modes));
 
 disp('loaded eigenmodes')
 
 %%
 
 % Loop over zstat maps and do variogram tests
+
+num_modes = 200;
 
 % nperms = 1e2 ;
 nperms = 5e3; 
@@ -87,6 +55,11 @@ loaded_data = load('./NSBLab_repo/data/figures_Nature/Figure1.mat') ;
 map_names = fieldnames(loaded_data.task_map_emp) ;
 
 eigenmodes_nocort = eigenmodes(cortex,:) ;
+clear eigenmodes
+
+eigenmodes_nocort_200 = eigenmodes_nocort(:,1:200) ;
+
+%% loop eet
 
 for map_idx = 1:length(map_names)
 
@@ -101,17 +74,17 @@ for map_idx = 1:length(map_names)
     
     %% do spins and recort results
     
-    filename = sprintf('./gen_data/signflip_%s_%s-%s.mat',map_names{map_idx},surface_interest,hemisphere) ; 
+    filename = sprintf('./gen_data/signflipNampNsurfTWO_%s_%s-%s.mat',map_names{map_idx},surface_interest,hemisphere) ; 
     
     if ~isfile(filename)
 
         % compute original accuracy
-        signflip_results.recon_acc = calc_eigdecomp_recon_acc(data_to_reconstruct(cortex),eigenmodes(cortex,:),num_modes) ; 
+        signflip_results.recon_acc = calc_eigdecomp_recon_acc(data_to_reconstruct(cortex),eigenmodes_nocort,num_modes) ; 
         
         % make the randomized data (takes a lil bit of time)
         disp('making signflip dat')
-        surr_data_nocort = basis_signflip_surr(...
-            data_to_reconstruct(cortex),MEMredu(:,1:5000),nperms) ; 
+        [surr_data_nocort,~,surr_coefs,orig_coefs] = basis_signflipNamp_surr(...
+            data_to_reconstruct(cortex),eigenmodes_nocort(:,1:5000),nperms) ; % 
 
         perm_acc = nan(num_modes,nperms) ; 
 
@@ -125,7 +98,7 @@ for map_idx = 1:length(map_names)
             disp([ num2str(map_idx) ' -     ' num2str(idx) ] )
         
             perm_acc(:,idx) = calc_eigdecomp_recon_acc(surr_data_nocort(:,idx),...
-                                               eigenmodes_nocort,num_modes) ; 
+                                               eigenmodes_nocort_200,num_modes) ; 
         
         end
     
@@ -133,11 +106,20 @@ for map_idx = 1:length(map_names)
         signflip_results.perm_acc = perm_acc ; 
 
         % save it
-        save(filename,'signflip_results','surr_data_nocort')
+        save(filename,'signflip_results','surr_data_nocort',...
+            'surr_coefs','orig_coefs')
 
     end
 
 end
+
+% %%
+% 
+ss = nan(length(cortex),1) ;
+ss(cortex) = surr_data_nocort(:,99) ;
+figure
+quick_trisurf(surface_midthickness,ss)
+
 
 %% vizz it
 
@@ -158,7 +140,7 @@ map_names_better = { 'Social' 'Motor' 'Gambling' 'WM' ...
 
 for idx = 1:length(map_names)
 
-    filename = sprintf('./gen_data/signflip_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
+    filename = sprintf('./gen_data/signflipNampNsurfTWO_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
 
     ll = load(filename,'signflip_results') ; 
 
@@ -221,7 +203,7 @@ end
 
 %% save figure 
 
-outfile = './figures/signflip_eigenmodes_patchversion.pdf' ; 
+outfile = './figures/signflipNampNsurfTWO_eigenmodes_patchversion.pdf' ; 
 orient(gcf,'landscape')
 print(gcf,'-dpdf',outfile,'-bestfit','-vector')
 close(gcf)
@@ -249,7 +231,7 @@ emppower = cell(length(map_names),1) ;
 
 for idx = 1:length(map_names)
 
-    filename = sprintf('./gen_data/signflip_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
+    filename = sprintf('./gen_data/signflipNampNsurfTWO_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
 
     ll = load(filename,'surr_data_nocort') ; 
 
@@ -287,13 +269,13 @@ for idx = 1:length(map_names)
 
     disp(idx)
 
-    filename = sprintf('./gen_data/signflip_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
+    filename = sprintf('./gen_data/signflipNampNsurfTWO_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
     ll = load(filename,'surr_data_nocort') ; 
 
     dtr = loaded_data.task_map_emp.(map_names{idx}) ; 
     dtr = dtr(cortex) ;
 
-    map_sim{idx} = arrayfun(@(x_) corr(ll.surr_data_nocort(:,x_),dtr), 1:nperms ) ; 
+    map_sim{idx} = arrayfun(@(x_) corr(ll.surr_data_nocort(:,x_),dtr), 1:size(ll.surr_data_nocort,2) ) ; 
 
 end
 
@@ -309,18 +291,18 @@ for idx = 1:length(map_names)
     nexttile(idx)
 
     ccc = cmap(idx,:) ; 
-    plot(log(surpower{idx}),'Color',[ ccc 0.1 ])
-    hold on
-    plot(log(emppower{idx}),'Color',[0.5 0.5 0.5 0.5],'LineWidth',0.5)
-    hold off
-
-    ylim([-35 0])
-
-    title(map_names_better{idx},'Interpreter','none')
-
-    if idx == 1
-        ylabel('Normalized power (log scale) ')
-    end
+    % plot(log(surpower{idx}),'Color',[ ccc 0.1 ])
+    % hold on
+    % plot(log(emppower{idx}),'Color',[0.5 0.5 0.5 0.5],'LineWidth',0.5)
+    % hold off
+    % 
+    % ylim([-35 0])
+    % 
+    % title(map_names_better{idx},'Interpreter','none')
+    % 
+    % if idx == 1
+    %     ylabel('Normalized power (log scale) ')
+    % end
 
     if idx == 4
         xlabel('Mode')
@@ -332,7 +314,7 @@ for idx = 1:length(map_names)
     h.FaceColor = ccc ; 
     h.EdgeAlpha = 0.1 ; 
     xlim([-0.7 0.7])
-    ylim([0 500])
+    ylim([0 600])
 
     if idx == 1
         ylabel('Count')
@@ -345,7 +327,7 @@ end
 
 %%
 
-outfile = './figures/signflip_spatial_freq.pdf' ; 
+outfile = './figures/signflipNampNsurfTWO_spatial_freq.pdf' ; 
 orient(gcf,'landscape')
 print(gcf,'-dpdf',outfile,'-bestfit','-vector')
 close(gcf)
@@ -354,7 +336,7 @@ close(gcf)
 
 
 idx=1;
-filename = sprintf('./gen_data/signflip_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
+filename = sprintf('./gen_data/signflipNampNsurfTWO_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
 ll = load(filename,'surr_data_nocort') ; 
 dtr = loaded_data.task_map_emp.(map_names{idx}) ; 
 
@@ -398,10 +380,87 @@ end
 
 %%
 
-outfile = './figures/signflip_example_surrs.png' ; 
+outfile = './figures/signflipNampNsurfTWO_example_surrs.png' ; 
 orient(gcf,'landscape')
 print(gcf,'-dpng',outfile)
-outfile = './figures/signflip_example_surrs.pdf' ; 
-print(gcf,'-dpdf',outfile,'-bestfit','-vector')
+% outfile = './figures/signflipNampNsurfTWO_example_surrs.pdf' ; 
+% print(gcf,'-dpdf',outfile,'-bestfit','-vector')
 close(gcf)
 
+%% make a plot of all the null coefficient vals ?
+
+tiledlayout(2,length(map_names))
+set(gcf,'Position', [200 200 1200 600]);
+
+for idx = 1:length(map_names)
+
+    nexttile(idx)
+
+    filename = sprintf('./gen_data/signflipNampNsurfTWO_%s_%s-%s.mat',map_names{idx},surface_interest,hemisphere) ; 
+    ll = load(filename,'surr_coefs','orig_coefs') ; 
+
+    %%
+
+    [~,emp_norm_power] = calc_power_spectrum(ll.orig_coefs ) ;
+    [~,sur_norm_power] = calc_power_spectrum(ll.surr_coefs) ;  
+
+    %%
+
+    title(map_names_better{idx},'Interpreter','none')
+
+    uptomode = 5000 ; 
+
+    [h, ppspan, cmap] = plot_manylines_aspatch((sur_norm_power(1:uptomode,:))) ; 
+    % hold on 
+    % plot((emp_norm_power(1:uptomode)),'Color',[1 0 0 0.3],'LineWidth',1)
+    % hold off
+
+    set(gca,'yscale','log')
+    ylim([10^-12 1])
+
+    h = gca ;
+    h.XTick = [ 1 uptomode/2 uptomode ] ; 
+
+    if idx == 1
+        ylabel('Normalized power (log scale) ')
+    end
+
+    if idx == 4
+        xlabel(['Modes (1-' num2str(uptomode) ')'])
+    end
+
+    nexttile(idx+length(map_names))
+
+    % [h, ppspan, cmap] = plot_manylines_aspatch(log10(sur_norm_power(1:200,:))) ; 
+    % hold on 
+    % plot(log10(emp_norm_power(1:200)),'r','LineWidth',1)
+    % hold off
+
+    [h, ppspan, cmap] = plot_manylines_aspatch((sur_norm_power(1:200,:))) ; 
+    hold on 
+    plot((emp_norm_power(1:200)),'Color',[1 0 0 0.5],'LineWidth',1)
+    hold off
+
+    set(gca,'yscale','log')
+    ylim([10^-8 1])
+
+    h = gca ;
+    h.XTick = [ 1 nonzeros(h.XTick)'] ; 
+
+    if idx == 1
+        ylabel('Normalized power (log scale) ')
+    end
+
+    if idx == 4
+        xlabel(['Modes (1-200)'])
+    end
+end
+
+%%
+
+outfile = './figures/signflipNampNsurfTWO_power_spect.png' ; 
+orient(gcf,'landscape')
+print(gcf,'-dpng',outfile)
+outfile = './figures/signflipNampNsurfTWO_power_spect.pdf' ; 
+print(gcf,'-dpdf',outfile,'-bestfit','-vector')
+close(gcf)
